@@ -93,3 +93,38 @@ for header v2); rootfs sector size 4096 (UFS); USB networking uses NCM.
 - Boot 2: kernel runs, panics at 1.8 s in `fbcon_init` -> `cfb_imageblit`: `mtk_fbdev_probe`
   sets `info->screen_base = NULL`. fbcon disabled and `PMOS_NOSPLASH` added until the fbdev
   mapping (`mtk_gem->kvaddr`) is tested.
+- Boot 3: initramfs could not find the rootfs subpartitions. On 4.14, `losetup -P
+  --sector-size 4096` scans the loop device for partitions before the sector size is
+  applied, and the kernel does not rescan. `blockdev --rereadpt /dev/loopN` makes
+  `pmOS_boot`/`pmOS_root` appear. Fix planned: initramfs hook in the device package that
+  rescans; propose the same one-liner upstream (`mount_subpartitions` in init_functions.sh).
+  After the manual rescan, `pmos_continue_boot` led to a reboot: cause unknown, read pstore.
+
+## Current phone layout
+
+- `boot_b`: Nura boot.img (active slot). `userdata`: Nura rootfs image.
+- `boot_a`, `dtbo_a`, `vbmeta_a`: Lineage images, only for recovery and pstore.
+- `vbmeta_a`/`vbmeta_b`: flashed with verity and verification disabled.
+- `fastboot boot` does not work on this LK (it falls back to recovery).
+
+## Debugging
+
+- USB networking (NCM): phone 172.16.42.1, host gets 172.16.42.2 by DHCP.
+- Initramfs debug shell: `nc 172.16.42.1 23`.
+- Kernel log after a crash: Vol Down + Power -> `fastboot set_active a` ->
+  `fastboot reboot recovery` -> `adb shell cat /sys/fs/pstore/console-ramoops`.
+  `fastboot set_active b` to go back.
+
+## Rebuild from scratch (after a VM reset)
+
+1. Lineage tree synced at `~/android/lineage` (only prebuilts and `mkdtboimg.py` are used).
+2. `git clone -b nura git@github.com:bjgo78/kernel_xiaomi_camellia.git ~/android/nura/kernel`
+   and clone this repo to `~/android/nura/nura_xiaomi_camellia`.
+3. pmbootstrap from git: clone `https://gitlab.postmarketos.org/postmarketOS/pmbootstrap.git`
+   into `~/android/nura/tools`, symlink `pmbootstrap.py` to `~/.local/bin/pmbootstrap`.
+4. `./build-nura-kernel.sh`
+5. `pmbootstrap init`: channel edge, vendor xiaomi, codename camellia, new downstream port
+   (the generated files are replaced by the sync), UI console. Then
+   `pmbootstrap config systemd never`.
+6. `./pmaports-sync.sh`, `pmbootstrap build linux-xiaomi-camellia device-xiaomi-camellia`,
+   `pmbootstrap install`, `pmbootstrap export`.
