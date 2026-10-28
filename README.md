@@ -34,7 +34,11 @@ Result in `~/android/nura/dist`: `Image.gz`, `dtb.img` (DT table, one entry
 
 - `camellia_nura.config`: fragment merged on top of `camellia_stock_defconfig`
   (devtmpfs, VT and fbcon, SysV IPC, USB NCM gadget, USB Ethernet for OTG,
-  no firmware user-helper fallback, in-kernel fuel gauge).
+  in-kernel fuel gauge).
+- `FW_LOADER_USER_HELPER_FALLBACK` stays on: `MEDIATEK_SOLUTION` selects it. The kernel still
+  tries `/lib/firmware` directly first, but a file that is missing there makes it wait for a
+  userspace helper (default 60 s per request). To do in the device package: write a short
+  value to `/sys/class/firmware/timeout` early in boot.
 - `STATIC_USERMODEHELPER` stays on: `ANDROID_DEFAULT_SETTING` selects it. Its path
   (`/system_ext/bin/aee_core_forwarder`) does not exist on Nura, so usermode helpers fail;
   `orderly_poweroff(true)` then falls back to a forced power-off. Do not set the path to `""`:
