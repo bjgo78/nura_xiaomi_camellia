@@ -23,6 +23,10 @@ they contain IMEI, MAC addresses and calibration data.
 
     ~/android/nura/nura_xiaomi_camellia/build-nura-kernel.sh
 
+Only `NURA_LOS` / `NURA_DIR` are read from the environment and make runs under `env -i`,
+so a shell with Lineage's envsetup loaded (which exports `OUT`) is safe.
+`TARGET_BUILD_VARIANT=userdebug` is passed explicitly, matching Lineage.
+
 Result in `~/android/nura/dist`: `Image.gz`, `dtb.img` (DT table, one entry
 `mediatek/mt6833.dtb`), the final config and the kernel commit.
 
@@ -30,7 +34,11 @@ Result in `~/android/nura/dist`: `Image.gz`, `dtb.img` (DT table, one entry
 
 - `camellia_nura.config`: fragment merged on top of `camellia_stock_defconfig`
   (devtmpfs, VT and fbcon, SysV IPC, USB NCM gadget, USB Ethernet for OTG,
-  no firmware user helper, no static usermode helper, in-kernel fuel gauge).
+  no firmware user-helper fallback, in-kernel fuel gauge).
+- `STATIC_USERMODEHELPER` stays on: `ANDROID_DEFAULT_SETTING` selects it. Its path
+  (`/system_ext/bin/aee_core_forwarder`) does not exist on Nura, so usermode helpers fail;
+  `orderly_poweroff(true)` then falls back to a forced power-off. Do not set the path to `""`:
+  that turns helpers into a silent success and the forced fallback never runs.
 - `MTK_BATTERY_KERNEL_GAUGE`: runs the in-kernel (recovery) gauge algorithm in normal boot,
   because the userspace `fuelgauged` does not exist outside Android. Default `n`.
 
