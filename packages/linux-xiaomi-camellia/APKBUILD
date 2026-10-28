@@ -1,0 +1,26 @@
+# Kernel for Xiaomi Redmi Note 10 5G (camellia).
+#
+# Prebuilt: compiled outside pmbootstrap by build-nura-kernel.sh (this repo) from
+# github.com/bjgo78/kernel_xiaomi_camellia branch "nura", with the Lineage toolchain
+# (clang r383902, LTO + CFI). pmaports-sync.sh copies Image.gz, dtb.img and the
+# config from ~/android/nura/dist into this package and updates the checksums.
+pkgname=linux-xiaomi-camellia
+pkgver=4.14.186
+pkgrel=0
+pkgdesc="Xiaomi Redmi Note 10 5G kernel (downstream, prebuilt)"
+arch="aarch64"
+_flavor="xiaomi-camellia"
+url="https://github.com/bjgo78/kernel_xiaomi_camellia/tree/nura"
+license="GPL-2.0-only"
+options="!strip !check !tracedeps pmb:cross-native"
+source="
+	Image.gz
+	dtb.img
+	config-$_flavor.aarch64
+"
+
+package() {
+	install -Dm644 "$srcdir/Image.gz" "$pkgdir/boot/vmlinuz"
+	install -Dm644 "$srcdir/dtb.img" "$pkgdir/boot/dtb-$_flavor.img"
+	install -Dm644 "$srcdir/config-$_flavor.aarch64" "$pkgdir/boot/config-$_flavor"
+}
