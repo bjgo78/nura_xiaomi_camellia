@@ -1,0 +1,54 @@
+# Nura on Xiaomi Redmi Note 10 5G (camellia)
+
+Downstream Nura (postmarketOS) port for camellia, used as a headless Linux server:
+charging, Wi-Fi, screen and touch for setup, USB OTG Ethernet optional.
+Kept fully separate from the LineageOS 22.2 build.
+
+## Layout
+
+| What | Where |
+|---|---|
+| Kernel | `bjgo78/kernel_xiaomi_camellia`, branch `nura` (from `lineage-22.2` at `1576725`), own clone at `~/android/nura/kernel` |
+| This repo | build script, Nura packages (`device-xiaomi-camellia`, `linux-xiaomi-camellia`, later firmware, WMT tool, power/thermal service) |
+| Build output | `~/android/nura/KERNEL_OBJ`, `~/android/nura/dist` (not tracked) |
+| pmbootstrap | its own work dir; packages are copied in from this repo |
+
+The Lineage tree (`~/android/lineage`) is only read: clang r383902, GCC 4.9 binutils,
+build-tools and `system/libufdt/utils/src/mkdtboimg.py`. Nothing from its `out/` is used.
+
+Never commit partition backups (nvram, nvdata, nvcfg, persist, protect1/2, proinfo):
+they contain IMEI, MAC addresses and calibration data.
+
+## Build the kernel
+
+    ~/android/nura/nura_xiaomi_camellia/build-nura-kernel.sh
+
+Result in `~/android/nura/dist`: `Image.gz`, `dtb.img` (DT table, one entry
+`mediatek/mt6833.dtb`), the final config and the kernel commit.
+
+## Kernel branch `nura`
+
+- `camellia_nura.config`: fragment merged on top of `camellia_stock_defconfig`
+  (devtmpfs, VT and fbcon, SysV IPC, USB NCM gadget, USB Ethernet for OTG,
+  no firmware user helper, no static usermode helper, in-kernel fuel gauge).
+- `MTK_BATTERY_KERNEL_GAUGE`: runs the in-kernel (recovery) gauge algorithm in normal boot,
+  because the userspace `fuelgauged` does not exist outside Android. Default `n`.
+
+## Notes from Lineage (2026-10-28)
+
+- Boot: header v2, `dtb.img` is a DT table (`androidboot.dtb_idx=0`). Keep
+  `bootopt=64S3,32N2,64N2` in the cmdline. The dts bootargs carry `initcall_debug=1`;
+  override with `initcall_debug=0`. Firmware loader falls back to `/lib/firmware`.
+- Wi-Fi chain: `wmt_loader` (ioctls on `/dev/wmtdetect`) -> `wmt_launcher -p /vendor/firmware/ -o 1`
+  (resident, answers patch search requests on `/dev/stpwmt`) -> NVRAM push:
+  one `write()` of `WR-BUF:NVRAM` + the `WIFI` file (nvdata `APCFG/APRDEB/WIFI`, 2050 bytes)
+  to `/dev/wmtWifi` (done by `wlan_assistant` on Android) -> `echo 1 > /dev/wmtWifi` gives `wlan0`.
+- Charging control: `echo "0 1" > /proc/mtk_battery_cmd/current_cmd` stops charging but keeps
+  the power path (tested: `Not charging`, +1.2 mA), `"0 0"` resumes. Not persistent.
+  `battery/input_suspend` cuts input completely (runs on battery). `CURRENT_NOW` negative = charging.
+- Thermal: Android's live policy equals the kernel defaults except `tzbattery`
+  (Android: 60 C -> `mtktsbattery-sysrst`, 1 s polling; kernel: no trips). Restore with:
+
+      echo "1 60000 0 mtktsbattery-sysrst 48000 0 no-cooler 46000 0 no-cooler 45000 0 no-cooler 44000 0 no-cooler 43000 0 no-cooler 42000 0 no-cooler 41000 0 no-cooler 40000 0 no-cooler 39000 0 no-cooler 1000" > /proc/driver/thermal/tzbattery
+
+- Display: MTK DRM with fbdev on top of the LK framebuffer (`/dev/graphics/fb0` on Android).
