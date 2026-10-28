@@ -85,3 +85,11 @@ for header v2); rootfs sector size 4096 (UFS); USB networking uses NCM.
       echo "1 60000 0 mtktsbattery-sysrst 48000 0 no-cooler 46000 0 no-cooler 45000 0 no-cooler 44000 0 no-cooler 43000 0 no-cooler 42000 0 no-cooler 41000 0 no-cooler 40000 0 no-cooler 39000 0 no-cooler 1000" > /proc/driver/thermal/tzbattery
 
 - Display: MTK DRM with fbdev on top of the LK framebuffer (`/dev/graphics/fb0` on Android).
+
+## Bring-up log
+
+- Boot 1 (`fastboot boot`): not supported by this LK; it falls back to recovery. Nura is flashed
+  to `boot_b`; `boot_a`/`dtbo_a`/`vbmeta_a` hold Lineage's images for recovery and pstore.
+- Boot 2: kernel runs, panics at 1.8 s in `fbcon_init` -> `cfb_imageblit`: `mtk_fbdev_probe`
+  sets `info->screen_base = NULL`. fbcon disabled and `PMOS_NOSPLASH` added until the fbdev
+  mapping (`mtk_gem->kvaddr`) is tested.
