@@ -23,7 +23,8 @@ source="
 
 package() {
 	install -Dm644 "$srcdir/Image.gz" "$pkgdir/boot/vmlinuz"
-	install -Dm644 "$srcdir/dtb.img" "$pkgdir/boot/dtb-$_flavor.img"
+	# DT table (see deviceinfo_dtb in device-xiaomi-camellia)
+	install -Dm644 "$srcdir/dtb.img" "$pkgdir/boot/dtbs/mediatek/mt6833-camellia-dtbtable.dtb"
 	install -Dm644 "$srcdir/config-$_flavor.aarch64" "$pkgdir/boot/config-$_flavor"
 	# mkinitfs finds the kernel release (uname -r) here
 	install -Dm644 "$srcdir/kernel.release" "$pkgdir/usr/share/kernel/$_flavor/kernel.release"

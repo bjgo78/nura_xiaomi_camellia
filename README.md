@@ -63,9 +63,9 @@ pmbootstrap: installed from git (PyPI releases are yanked), channel edge (downst
 exist only there), `pmbootstrap config systemd never` (OpenRC; the 4.14 kernel is too old
 for current systemd).
 
-deviceinfo notes: `deviceinfo_bootimg_custom_args` passes the DT-table `dtb.img` and the
-dtb offset (custom args replace the generated `--header_version`/`--dtb`); rootfs sector
-size 4096 (UFS); USB networking uses NCM.
+deviceinfo notes: `deviceinfo_dtb` names the DT-table `dtb.img`, installed as
+`/boot/dtbs/mediatek/mt6833-camellia-dtbtable.dtb` (boot-deploy requires `deviceinfo_dtb`
+for header v2); rootfs sector size 4096 (UFS); USB networking uses NCM.
 
 ## Notes from Lineage (2026-10-28)
 

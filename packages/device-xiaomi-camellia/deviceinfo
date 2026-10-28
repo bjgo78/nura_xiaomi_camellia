@@ -7,7 +7,10 @@ deviceinfo_name="Xiaomi Redmi Note 10 5G"
 deviceinfo_manufacturer="Xiaomi"
 deviceinfo_codename="xiaomi-camellia"
 deviceinfo_year="2021"
-deviceinfo_dtb=""
+# Not a plain dtb: a DT table with one entry (mediatek/mt6833.dtb), byte-identical to
+# Lineage's dtb.img; LK picks the entry (androidboot.dtb_idx=0). Installed by
+# linux-xiaomi-camellia under /boot/dtbs so boot-deploy passes it as the header v2 dtb.
+deviceinfo_dtb="mediatek/mt6833-camellia-dtbtable"
 deviceinfo_arch="aarch64"
 
 # Device related
@@ -25,10 +28,6 @@ deviceinfo_flash_pagesize="2048"
 deviceinfo_bootimg_qcdt="false"
 deviceinfo_header_version="2"
 deviceinfo_append_dtb="false"
-# The boot.img dtb is a DT table with one entry (mediatek/mt6833.dtb), same as Lineage's
-# dtb.img; LK picks the entry (androidboot.dtb_idx=0). Custom args replace the generated
-# --header_version/--dtb arguments, so both are given here.
-deviceinfo_bootimg_custom_args="--header_version 2 --dtb /boot/dtb-xiaomi-camellia.img --dtb_offset 0x07c08000"
 deviceinfo_flash_offset_dtb="0x07c08000"
 deviceinfo_flash_offset_base="0x40078000"
 deviceinfo_flash_offset_kernel="0x00008000"
