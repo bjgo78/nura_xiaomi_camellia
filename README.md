@@ -34,17 +34,19 @@ Result in `~/android/nura/dist`: `Image.gz`, `dtb.img` (DT table, one entry
 
 - `camellia_nura.config`: fragment merged on top of `camellia_stock_defconfig`
   (devtmpfs, VT and fbcon, SysV IPC, USB NCM gadget, USB Ethernet for OTG,
-  in-kernel fuel gauge).
+  in-kernel fuel gauge, user namespaces, uevent helper).
+- `MTK_BATTERY_KERNEL_GAUGE`: runs the in-kernel (recovery) gauge algorithm in normal boot,
+  because the userspace `fuelgauged` does not exist outside Android. Default `n`.
+- `STATIC_USERMODEHELPER` off: `ANDROID_DEFAULT_SETTING` used to select it (patched on
+  this branch), which routed every usermode helper (uevent helper, poweroff/reboot) through
+  the Android-only `/system_ext/bin/aee_core_forwarder`. `USER_NS` and `UEVENT_HELPER` on, as
+  required by `pmbootstrap kconfig check`.
 - `FW_LOADER_USER_HELPER_FALLBACK` stays on: `MEDIATEK_SOLUTION` selects it. The kernel still
   tries `/lib/firmware` directly first, but a file that is missing there makes it wait for a
   userspace helper (default 60 s per request). To do in the device package: write a short
   value to `/sys/class/firmware/timeout` early in boot.
-- `STATIC_USERMODEHELPER` stays on: `ANDROID_DEFAULT_SETTING` selects it. Its path
-  (`/system_ext/bin/aee_core_forwarder`) does not exist on Nura, so usermode helpers fail;
-  `orderly_poweroff(true)` then falls back to a forced power-off. Do not set the path to `""`:
-  that turns helpers into a silent success and the forced fallback never runs.
-- `MTK_BATTERY_KERNEL_GAUGE`: runs the in-kernel (recovery) gauge algorithm in normal boot,
-  because the userspace `fuelgauged` does not exist outside Android. Default `n`.
+- `vt: selection`: duplicate `set_selection()` from a 4.14.y merge removed (the file was
+  never built while `VT` was off).
 
 ## Nura packages
 
