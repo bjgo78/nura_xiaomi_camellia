@@ -85,11 +85,13 @@ echo "$DTB_CFG_LINE" > "$KOBJ/dtb.cfg"
 
 cp "$KOBJ/arch/arm64/boot/Image.gz" "$KDIST/Image.gz"
 cp "$KOBJ/.config" "$KDIST/config-xiaomi-camellia.aarch64"
+cp "$KOBJ/include/config/kernel.release" "$KDIST/kernel.release"
 git -C "$KSRC" rev-parse HEAD > "$KDIST/kernel-commit"
 
 cd "$KDIST"
 sha256sum Image.gz dtb.img config-xiaomi-camellia.aarch64
 echo "kernel commit: $(cat kernel-commit)"
+echo "kernel release: $(cat kernel.release)"
 LOS_DTB=$LOS/out/target/product/camellia/dtb.img
 if [ -e "$LOS_DTB" ]; then
     if cmp -s dtb.img "$LOS_DTB"; then echo "dtb.img: identical to Lineage's"; else echo "dtb.img: differs from Lineage's"; fi
