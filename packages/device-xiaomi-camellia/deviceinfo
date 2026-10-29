@@ -18,6 +18,8 @@ deviceinfo_chassis="handset"
 deviceinfo_initfs_compression="gzip"
 # macOS has no RNDIS driver; NCM works on macOS, Linux and Windows
 deviceinfo_usb_network_function="ncm.usb0"
+deviceinfo_usb_idVendor="0x1d6b"
+deviceinfo_usb_idProduct="0x0104"
 
 # Bootloader related
 deviceinfo_flash_method="fastboot"

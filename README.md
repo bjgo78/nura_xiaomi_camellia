@@ -128,3 +128,9 @@ for header v2); rootfs sector size 4096 (UFS); USB networking uses NCM.
    `pmbootstrap config systemd never`.
 6. `./pmaports-sync.sh`, `pmbootstrap build linux-xiaomi-camellia device-xiaomi-camellia`,
    `pmbootstrap install`, `pmbootstrap export`.
+- Boot 4: loop rescan patch works (rootfs found, no debug shell). At the hand-over the
+  initramfs removes its ACM serial and mass-storage functions while getty reopens ttyGS0;
+  `gs_close()` then dereferenced a NULL port (Oops in tty_release <- tty_open). Patched
+  u_serial; this was also the reboot after `pmos_continue_boot` in boot 3.
+- USB IDs changed to 1d6b:0104: Windows ADB driver packs claim 18d1:d001 (Nura's default)
+  as an ADB recovery interface, so the NCM network never appeared on Windows.
