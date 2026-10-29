@@ -1,0 +1,69 @@
+#!/usr/bin/python3
+# Mark the current A/B slot as successfully booted, like Android's boot control HAL
+# (AOSP libboot_control MarkBootSuccessful): the slot state is a struct
+# bootloader_control ("BCAB") at offset 2048 of the misc partition, CRC32 over the
+# first 28 bytes. Without this the bootloader counts down tries_remaining on every
+# boot and finally falls back to the other slot.
+import os, sys, struct, zlib, glob
+
+OFFSET = 2048
+SIZE = 32
+
+def misc_device():
+    for ev in glob.glob('/sys/class/block/*/uevent'):
+        with open(ev) as f:
+            if 'PARTNAME=misc\n' in f.read():
+                return '/dev/' + ev.split('/')[-2]
+    sys.exit('misc partition not found')
+
+def current_slot():
+    with open('/proc/cmdline') as f:
+        for arg in f.read().split():
+            if arg.startswith('androidboot.slot_suffix='):
+                return {'_a': 0, '_b': 1}[arg.split('=', 1)[1]]
+    sys.exit('androidboot.slot_suffix not on the kernel command line')
+
+def describe(b):
+    out = []
+    for i, name in enumerate('ab'):
+        v = b[12 + 2 * i]
+        out.append(f'{name}: priority={v & 15} tries={(v >> 4) & 7} successful={v >> 7}')
+    return ', '.join(out)
+
+def main():
+    dry = '--dry-run' in sys.argv
+    dev = misc_device()
+    slot = current_slot()
+    with open(dev, 'rb') as f:
+        f.seek(OFFSET)
+        b = bytearray(f.read(SIZE))
+    if b[4:8] != b'BCAB':
+        sys.exit(f'{dev}: no bootloader_control magic at {OFFSET}')
+    if struct.unpack('<I', b[28:32])[0] != zlib.crc32(bytes(b[:28])):
+        sys.exit(f'{dev}: bootloader_control CRC mismatch, not touching it')
+    print(f'{dev} current slot {"ab"[slot]}: {describe(b)}')
+    i = 12 + 2 * slot
+    v = b[i]
+    if v >> 7 and (v >> 4) & 7:
+        print('already marked successful')
+        return
+    b[i] = (v & 0x0f) | (1 << 4) | (1 << 7)   # tries_remaining=1, successful_boot=1
+    b[28:32] = struct.pack('<I', zlib.crc32(bytes(b[:28])))
+    print(f'new: {describe(b)}')
+    if dry:
+        print('dry run, nothing written')
+        return
+    fd = os.open(dev, os.O_WRONLY)
+    try:
+        os.lseek(fd, OFFSET, os.SEEK_SET)
+        os.write(fd, bytes(b))
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+    with open(dev, 'rb') as f:
+        f.seek(OFFSET)
+        if f.read(SIZE) != bytes(b):
+            sys.exit('verification failed')
+    print('written and verified')
+
+main()

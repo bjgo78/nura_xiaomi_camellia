@@ -141,3 +141,9 @@ for header v2); rootfs sector size 4096 (UFS); USB networking uses NCM.
 - Reading the Nura rootfs from Lineage recovery: `setenforce 0`, `losetup -r -o
   $((START*4096))` on userdata (START from the GPT, entry 2), `mount -o ro,noload`.
   `/var/log/dmesg` holds the full kernel log of the last boot.
+- Boot 8: zram works (modules.builtin + depmod in the kernel package). A/B slot state is
+  AOSP bootloader_control ("BCAB") at offset 2048 of `misc` (sdc1; not in by-partlabel),
+  CRC32 over the first 28 bytes. Slot b had tries=0: files/mark-boot-successful (+ OpenRC
+  service) sets successful_boot=1/tries=1 on every boot, like Android's boot HAL.
+  boot_b is write-protected while running; kernel updates go through
+  tools/update-kernel.ps1 (fastboot).
