@@ -77,7 +77,7 @@ while IFS= read -r line; do
 done < "$KSRC/$FRAGMENT"
 [ "$missing" -eq 0 ] || { echo "fragment options did not stick (unmet dependencies?)" >&2; exit 1; }
 
-kmake Image.gz dtbs
+kmake Image.gz dtbs modules.builtin
 
 # dtb.img: DT table with one entry, same as BOARD_DTB_CFG in the Lineage device tree
 echo "$DTB_CFG_LINE" > "$KOBJ/dtb.cfg"
@@ -86,6 +86,7 @@ echo "$DTB_CFG_LINE" > "$KOBJ/dtb.cfg"
 cp "$KOBJ/arch/arm64/boot/Image.gz" "$KDIST/Image.gz"
 cp "$KOBJ/.config" "$KDIST/config-xiaomi-camellia.aarch64"
 cp "$KOBJ/include/config/kernel.release" "$KDIST/kernel.release"
+cp "$KOBJ/modules.builtin" "$KDIST/modules.builtin"
 git -C "$KSRC" rev-parse HEAD > "$KDIST/kernel-commit"
 
 cd "$KDIST"

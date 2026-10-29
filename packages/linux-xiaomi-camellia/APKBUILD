@@ -3,7 +3,7 @@
 # Prebuilt: compiled outside pmbootstrap by build-nura-kernel.sh (this repo) from
 # github.com/bjgo78/kernel_xiaomi_camellia branch "nura", with the Lineage toolchain
 # (clang r383902, LTO + CFI). pmaports-sync.sh copies Image.gz, dtb.img, the config
-# and kernel.release from ~/android/nura/dist into this package, sets pkgver to
+# kernel.release and modules.builtin from ~/android/nura/dist into this package, sets pkgver to
 # 4.14.186_p<build time> and updates the checksums.
 pkgname=linux-xiaomi-camellia
 pkgver=4.14.186
@@ -13,12 +13,14 @@ arch="aarch64"
 _flavor="xiaomi-camellia"
 url="https://github.com/bjgo78/kernel_xiaomi_camellia/tree/nura"
 license="GPL-2.0-only"
-options="!strip !check !tracedeps pmb:cross-native pmb:kconfigcheck-nftables pmb:kconfigcheck-zram"
+makedepends="kmod"
+options="!strip !check !tracedeps pmb:cross-native"
 source="
 	Image.gz
 	dtb.img
 	config-$_flavor.aarch64
 	kernel.release
+	modules.builtin
 "
 
 package() {
@@ -28,4 +30,12 @@ package() {
 	install -Dm644 "$srcdir/config-$_flavor.aarch64" "$pkgdir/boot/config-$_flavor"
 	# mkinitfs finds the kernel release (uname -r) here
 	install -Dm644 "$srcdir/kernel.release" "$pkgdir/usr/share/kernel/$_flavor/kernel.release"
+
+	# No loadable modules, but modprobe (e.g. "modprobe zram") must see the built-in
+	# ones, otherwise it fails for lack of /lib/modules/<release>.
+	local _rel
+	_rel="$(cat "$srcdir/kernel.release")"
+	install -Dm644 "$srcdir/modules.builtin" "$pkgdir/usr/lib/modules/$_rel/modules.builtin"
+	: > "$pkgdir/usr/lib/modules/$_rel/modules.order"
+	depmod -b "$pkgdir/usr" "$_rel"
 }
