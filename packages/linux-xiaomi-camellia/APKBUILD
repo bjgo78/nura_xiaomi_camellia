@@ -13,7 +13,7 @@ arch="aarch64"
 _flavor="xiaomi-camellia"
 url="https://github.com/bjgo78/kernel_xiaomi_camellia/tree/nura"
 license="GPL-2.0-only"
-options="!strip !check !tracedeps pmb:cross-native"
+options="!strip !check !tracedeps pmb:cross-native pmb:kconfigcheck-nftables pmb:kconfigcheck-zram"
 source="
 	Image.gz
 	dtb.img
