@@ -147,3 +147,16 @@ for header v2); rootfs sector size 4096 (UFS); USB networking uses NCM.
   service) sets successful_boot=1/tries=1 on every boot, like Android's boot HAL.
   boot_b is write-protected while running; kernel updates go through
   tools/update-kernel.ps1 (fastboot).
+- Boot 9: Wi-Fi works (manual, files/wifi-up). Chain: WMT loader ioctls on /dev/wmtdetect
+  (SOC_HW_INIT returns EBUSY when built in; ignore) -> files/wmt-launcher answers
+  "srh_rom_patch" with SET_ROM_PATCH_INFO (type = header byte 31, EMI offset = header
+  bytes 25-27, files soc2_2_ram_*_1_1_hdr.bin for A-die MT6631) -> NVRAM push
+  ("WR-BUF:NVRAM" + nvdata APCFG/APRDEB/WIFI, one write) -> echo 1 > /dev/wmtWifi.
+  Firmware from the vendor repo in /lib/firmware: WMT_SOC.cfg, soc2_2_ram_*_hdr.bin,
+  WIFI_RAM_CODE_soc2_2_*.bin, wifi.cfg, txpowerctrl.cfg.
+  NetworkManager must not manage ap0/p2p0 (it picked ap0 for a client connection).
+  Built-in regulatory db was an empty placeholder: imported wireless-regdb db.txt.
+  5 GHz with country HU: <result of the test>.
+- Next: firmware-xiaomi-camellia package; OpenRC services for the Wi-Fi chain, NM
+  unmanaged config, mark-boot-successful, charge limiter + tzbattery, firmware timeout;
+  cfg80211.ieee80211_regdom=HU on the cmdline.
