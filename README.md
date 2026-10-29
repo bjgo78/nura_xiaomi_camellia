@@ -134,3 +134,10 @@ for header v2); rootfs sector size 4096 (UFS); USB networking uses NCM.
   u_serial; this was also the reboot after `pmos_continue_boot` in boot 3.
 - USB IDs changed to 1d6b:0104: Windows ADB driver packs claim 18d1:d001 (Nura's default)
   as an ADB recovery interface, so the NCM network never appeared on Windows.
+- Boot 5: full system up (dropbear keys generated, OpenRC ran), u_serial fix works. USB
+  network dead on Windows: f_ncm only set `ndp_sign` on SET_CRC_MODE; Windows 11 selects
+  32-bit NTBs and never sends it, so every NTB was dropped ("Wrong NDP SIGN"). Patched
+  f_ncm. pstore can keep a stale record: clear `/sys/fs/pstore` after reading it.
+- Reading the Nura rootfs from Lineage recovery: `setenforce 0`, `losetup -r -o
+  $((START*4096))` on userdata (START from the GPT, entry 2), `mount -o ro,noload`.
+  `/var/log/dmesg` holds the full kernel log of the last boot.
