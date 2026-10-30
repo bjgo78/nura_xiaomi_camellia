@@ -2,7 +2,7 @@
 maintainer=""
 pkgname=device-xiaomi-camellia
 pkgver=1
-pkgrel=2
+pkgrel=3
 pkgdesc="Xiaomi Redmi Note 10 5G"
 url="https://github.com/bjgo78/nura_xiaomi_camellia"
 arch="aarch64"
@@ -12,6 +12,7 @@ depends="
 	firmware-xiaomi-camellia
 	iw
 	linux-xiaomi-camellia
+	openssh-sftp-server
 	postmarketos-base
 	postmarketos-base-downstream
 	python3
