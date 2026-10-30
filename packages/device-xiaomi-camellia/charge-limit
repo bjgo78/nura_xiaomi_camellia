@@ -1,0 +1,25 @@
+#!/bin/sh
+# Keep the battery between START and STOP percent while on external power, for 24/7
+# operation. Uses the MTK charger's "disable charging but keep the power path" switch
+# (/proc/mtk_battery_cmd/current_cmd: "0 1" = charging off, "0 0" = on): the phone then
+# runs from the adapter and the battery idles. Usage: charge-limit START STOP INTERVAL
+START=${1:-75}
+STOP=${2:-80}
+INTERVAL=${3:-60}
+CMD=/proc/mtk_battery_cmd/current_cmd
+CAPACITY=/sys/class/power_supply/battery/capacity
+
+set_charging() {
+	# $1: "0 0" (charge) or "0 1" (hold)
+	[ "$(cat "$CMD")" = "$1" ] || echo "$1" > "$CMD"
+}
+
+while :; do
+	level=$(cat "$CAPACITY")
+	if [ "$level" -ge "$STOP" ]; then
+		set_charging "0 1"
+	elif [ "$level" -le "$START" ]; then
+		set_charging "0 0"
+	fi
+	sleep "$INTERVAL"
+done

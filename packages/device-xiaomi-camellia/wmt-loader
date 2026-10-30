@@ -1,0 +1,27 @@
+#!/usr/bin/python3
+# Equivalent of MediaTek's wmt_loader for MT6833: initialise the connectivity drivers
+# through /dev/wmtdetect (same ioctl sequence as the vendor binary). In built-in mode
+# DO_MODULE_INIT runs do_connectivity_driver_init() once (WMT, BT, GPS, FM, WLAN) and
+# creates /dev/stpwmt and /dev/wmtWifi. It needs WMT_SOC.cfg in /lib/firmware.
+import os, fcntl, errno
+
+def IOR(nr):
+    return (2 << 30) | (4 << 16) | (ord('w') << 8) | nr
+
+SET_CHIP_ID, GET_SOC_CHIP_ID, DO_MODULE_INIT, MODULE_CLEANUP = IOR(1), IOR(3), IOR(4), IOR(5)
+GET_ADIE_CHIP_ID, CONNSYS_SOC_HW_INIT = IOR(9), IOR(10)
+
+fd = os.open('/dev/wmtdetect', os.O_RDWR)
+try:
+    fcntl.ioctl(fd, CONNSYS_SOC_HW_INIT, 0)
+except OSError as e:
+    # the platform driver is already registered when the drivers are built in
+    if e.errno != errno.EBUSY:
+        raise
+chip = fcntl.ioctl(fd, GET_SOC_CHIP_ID, 0)
+fcntl.ioctl(fd, SET_CHIP_ID, chip)
+adie = fcntl.ioctl(fd, GET_ADIE_CHIP_ID, 0)
+fcntl.ioctl(fd, MODULE_CLEANUP, chip)
+fcntl.ioctl(fd, DO_MODULE_INIT, chip)
+os.close(fd)
+print(f'wmt-loader: SoC 0x{chip:04x}, A-die 0x{adie:04x}, drivers initialised')

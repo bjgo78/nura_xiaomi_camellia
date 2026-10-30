@@ -1,0 +1,2 @@
+# Regulatory country for Wi-Fi (ISO 3166 alpha-2). Empty: world default.
+WIFI_COUNTRY="HU"

@@ -9,7 +9,7 @@ NDIR=${NURA_DIR:-$HOME/android/nura}
 DIST=$NDIR/dist
 APORTS=$(pmbootstrap config aports)
 DEST=$APORTS/device/downstream
-PKGS=(device-xiaomi-camellia linux-xiaomi-camellia)
+PKGS=(firmware-xiaomi-camellia device-xiaomi-camellia linux-xiaomi-camellia)
 
 [ -d "$DEST" ] || { echo "missing $DEST (pmaports not on edge?)" >&2; exit 1; }
 for f in Image.gz dtb.img config-xiaomi-camellia.aarch64 kernel.release modules.builtin; do

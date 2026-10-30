@@ -1,0 +1,5 @@
+# Charge limit for 24/7 operation on external power (percent): charging stops at
+# CHARGE_STOP and resumes at CHARGE_START. CHARGE_INTERVAL: check period in seconds.
+CHARGE_START=75
+CHARGE_STOP=80
+CHARGE_INTERVAL=60

@@ -1,0 +1,106 @@
+#!/usr/bin/python3
+# Minimal replacement for MediaTek's wmt_launcher on MT6833 (connsys soc2_2), written
+# from the kernel side (drivers/misc/mediatek/connectivity/common/common_main):
+#  - sets the STP interface mode (BTIF, FM over the common interface)
+#  - answers the kernel's "srh_rom_patch" request on /dev/stpwmt with one
+#    WMT_IOCTL_SET_ROM_PATCH_INFO per patch file (type and EMI offset come from the
+#    patch header, like the vendor launcher does) and replies "ok"
+# Runs as the wmt-launcher OpenRC service, before camellia-wifi turns Wi-Fi on.
+import os, sys, struct, fcntl, select, glob, signal, time
+
+DEV = '/dev/stpwmt'
+FW_DIR = '/lib/firmware'
+WMT_IOC_MAGIC = 0xa0
+
+def _IOW(nr, size):
+    return (1 << 30) | (size << 16) | (WMT_IOC_MAGIC << 8) | nr
+
+WMT_IOCTL_SET_STP_MODE = _IOW(5, 4)            # int
+WMT_IOCTL_SET_LAUNCHER_KILL = _IOW(13, 4)      # int
+WMT_IOCTL_SET_ROM_PATCH_INFO = _IOW(31, 8)     # pointer to struct wmt_rom_patch_info
+
+STP_BTIF_FULL = 0x3
+WMT_FM_COMM = 0x2
+
+def log(msg):
+    print(f'wmt-launcher: {msg}', flush=True)
+
+def adie_chipid():
+    # Same query wmt_loader uses (COMBO_IOCTL_GET_ADIE_CHIP_ID on /dev/wmtdetect).
+    # The Wi-Fi driver uses flavor 'a' only for the MT6635 A-die (kalGetFwFlavorByPlat);
+    # the ROM patches follow the same naming (..._1a_1_hdr.bin vs ..._1_1_hdr.bin).
+    req = (2 << 30) | (4 << 16) | (ord('w') << 8) | 9
+    fd = os.open('/dev/wmtdetect', os.O_RDWR)
+    try:
+        return fcntl.ioctl(fd, req, 0)
+    finally:
+        os.close(fd)
+
+def rom_patches():
+    adie = adie_chipid()
+    flavor = 'a' if adie == 0x6635 else ''
+    log(f'A-die 0x{adie:04x}, patch flavor {flavor or "(none)"}')
+    names = sorted(glob.glob(os.path.join(FW_DIR, f'soc2_2_ram_*_1{flavor}_1_hdr.bin')))
+    patches = []
+    for path in names:
+        with open(path, 'rb') as f:
+            hdr = f.read(32)
+        if len(hdr) < 32:
+            log(f'{path}: header too short, skipped')
+            continue
+        addr = hdr[24:28]
+        ptype = hdr[31]
+        if not (addr[3] & 0xf0) or ptype > 5:
+            log(f'{path}: unexpected header (addr {addr.hex()} type {ptype}), skipped')
+            continue
+        # the vendor launcher clears the lowest address byte; the kernel uses
+        # addRess[2..0] as the EMI offset
+        patches.append((ptype, bytes([0, addr[1], addr[2], addr[3]]), os.path.basename(path)))
+    return patches
+
+def set_rom_patches(fd):
+    patches = rom_patches()
+    if not patches:
+        log('no ROM patches found')
+        return False
+    for ptype, addr, name in patches:
+        info = bytearray(struct.pack('<I4s256s', ptype, addr, name.encode()))
+        fcntl.ioctl(fd, WMT_IOCTL_SET_ROM_PATCH_INFO, info)
+        offset = addr[2] << 16 | addr[1] << 8 | addr[0]
+        log(f'rom patch type {ptype}: {name} (EMI offset 0x{offset:06x})')
+    return True
+
+def main():
+    fd = os.open(DEV, os.O_RDWR)
+
+    def stop(signum, frame):
+        try:
+            fcntl.ioctl(fd, WMT_IOCTL_SET_LAUNCHER_KILL, 1)
+        finally:
+            sys.exit(0)
+    signal.signal(signal.SIGTERM, stop)
+    signal.signal(signal.SIGINT, stop)
+
+    try:
+        fcntl.ioctl(fd, WMT_IOCTL_SET_STP_MODE, (WMT_FM_COMM << 4) | STP_BTIF_FULL)
+        log('STP mode set (BTIF)')
+    except OSError as e:
+        log(f'set STP mode: {e} (continuing)')
+    fcntl.ioctl(fd, WMT_IOCTL_SET_LAUNCHER_KILL, 0)
+
+    poller = select.poll()
+    poller.register(fd, select.POLLIN)
+    while True:
+        poller.poll()
+        cmd = os.read(fd, 256).split(b'\0')[0].decode(errors='replace').strip()
+        if not cmd:
+            time.sleep(0.05)
+            continue
+        log(f'request: {cmd}')
+        ok = True
+        if cmd == 'srh_rom_patch':
+            ok = set_rom_patches(fd)
+        os.write(fd, b'ok' if ok else b'fail')
+
+if __name__ == '__main__':
+    main()

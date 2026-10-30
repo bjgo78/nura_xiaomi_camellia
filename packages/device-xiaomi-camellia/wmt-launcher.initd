@@ -1,0 +1,21 @@
+#!/sbin/openrc-run
+
+description="MediaTek connectivity (WMT) loader and ROM patch launcher"
+
+command=/usr/libexec/camellia/wmt-launcher
+command_background=yes
+pidfile=/run/wmt-launcher.pid
+output_log=/var/log/wmt-launcher.log
+error_log=/var/log/wmt-launcher.log
+
+depend() {
+	need localmount
+	before camellia-wifi networkmanager wpa_supplicant
+}
+
+start_pre() {
+	# The firmware loader falls back to a userspace helper for missing files
+	# (FW_LOADER_USER_HELPER_FALLBACK is forced on); don't wait 60 s for it.
+	echo 1 > /sys/class/firmware/timeout
+	/usr/libexec/camellia/wmt-loader
+}

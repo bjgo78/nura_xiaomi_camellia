@@ -1,0 +1,40 @@
+# Connectivity firmware (WMT, Wi-Fi, Bluetooth) for the Xiaomi Redmi Note 10 5G (camellia),
+# from the device's vendor blobs. The _1_1 files are for the MT6631 A-die, _1a_1 for MT6635.
+pkgname=firmware-xiaomi-camellia
+pkgver=20261027
+pkgrel=0
+_commit=5416db4de44832ee99d1cf1ff7ac1e5274bf05e2
+pkgdesc="Xiaomi Redmi Note 10 5G connectivity firmware"
+url="https://github.com/bjgo78/vendor_xiaomi_camellia"
+arch="aarch64"
+license="proprietary"
+options="!check !strip !archcheck !tracedeps pmb:cross-native"
+source="
+	$pkgname-$_commit-WMT_SOC.cfg::$url/raw/$_commit/proprietary/vendor/firmware/WMT_SOC.cfg
+	$pkgname-$_commit-soc2_2_ram_mcu_1_1_hdr.bin::$url/raw/$_commit/proprietary/vendor/firmware/soc2_2_ram_mcu_1_1_hdr.bin
+	$pkgname-$_commit-soc2_2_ram_mcu_1a_1_hdr.bin::$url/raw/$_commit/proprietary/vendor/firmware/soc2_2_ram_mcu_1a_1_hdr.bin
+	$pkgname-$_commit-soc2_2_ram_wifi_1_1_hdr.bin::$url/raw/$_commit/proprietary/vendor/firmware/soc2_2_ram_wifi_1_1_hdr.bin
+	$pkgname-$_commit-soc2_2_ram_wifi_1a_1_hdr.bin::$url/raw/$_commit/proprietary/vendor/firmware/soc2_2_ram_wifi_1a_1_hdr.bin
+	$pkgname-$_commit-soc2_2_ram_bt_1_1_hdr.bin::$url/raw/$_commit/proprietary/vendor/firmware/soc2_2_ram_bt_1_1_hdr.bin
+	$pkgname-$_commit-soc2_2_ram_bt_1a_1_hdr.bin::$url/raw/$_commit/proprietary/vendor/firmware/soc2_2_ram_bt_1a_1_hdr.bin
+	$pkgname-$_commit-WIFI_RAM_CODE_soc2_2_1_1.bin::$url/raw/$_commit/proprietary/vendor/firmware/WIFI_RAM_CODE_soc2_2_1_1.bin
+	$pkgname-$_commit-WIFI_RAM_CODE_soc2_2_1a_1.bin::$url/raw/$_commit/proprietary/vendor/firmware/WIFI_RAM_CODE_soc2_2_1a_1.bin
+	$pkgname-$_commit-wifi.cfg::$url/raw/$_commit/proprietary/vendor/firmware/wifi.cfg
+	$pkgname-$_commit-txpowerctrl.cfg::$url/raw/$_commit/proprietary/vendor/firmware/txpowerctrl.cfg
+	$pkgname-$_commit-BT_FW.cfg::$url/raw/$_commit/proprietary/vendor/firmware/BT_FW.cfg
+"
+
+package() {
+	install -Dm644 "$srcdir"/$pkgname-$_commit-WMT_SOC.cfg "$pkgdir"/usr/lib/firmware/WMT_SOC.cfg
+	install -Dm644 "$srcdir"/$pkgname-$_commit-soc2_2_ram_mcu_1_1_hdr.bin "$pkgdir"/usr/lib/firmware/soc2_2_ram_mcu_1_1_hdr.bin
+	install -Dm644 "$srcdir"/$pkgname-$_commit-soc2_2_ram_mcu_1a_1_hdr.bin "$pkgdir"/usr/lib/firmware/soc2_2_ram_mcu_1a_1_hdr.bin
+	install -Dm644 "$srcdir"/$pkgname-$_commit-soc2_2_ram_wifi_1_1_hdr.bin "$pkgdir"/usr/lib/firmware/soc2_2_ram_wifi_1_1_hdr.bin
+	install -Dm644 "$srcdir"/$pkgname-$_commit-soc2_2_ram_wifi_1a_1_hdr.bin "$pkgdir"/usr/lib/firmware/soc2_2_ram_wifi_1a_1_hdr.bin
+	install -Dm644 "$srcdir"/$pkgname-$_commit-soc2_2_ram_bt_1_1_hdr.bin "$pkgdir"/usr/lib/firmware/soc2_2_ram_bt_1_1_hdr.bin
+	install -Dm644 "$srcdir"/$pkgname-$_commit-soc2_2_ram_bt_1a_1_hdr.bin "$pkgdir"/usr/lib/firmware/soc2_2_ram_bt_1a_1_hdr.bin
+	install -Dm644 "$srcdir"/$pkgname-$_commit-WIFI_RAM_CODE_soc2_2_1_1.bin "$pkgdir"/usr/lib/firmware/WIFI_RAM_CODE_soc2_2_1_1.bin
+	install -Dm644 "$srcdir"/$pkgname-$_commit-WIFI_RAM_CODE_soc2_2_1a_1.bin "$pkgdir"/usr/lib/firmware/WIFI_RAM_CODE_soc2_2_1a_1.bin
+	install -Dm644 "$srcdir"/$pkgname-$_commit-wifi.cfg "$pkgdir"/usr/lib/firmware/wifi.cfg
+	install -Dm644 "$srcdir"/$pkgname-$_commit-txpowerctrl.cfg "$pkgdir"/usr/lib/firmware/txpowerctrl.cfg
+	install -Dm644 "$srcdir"/$pkgname-$_commit-BT_FW.cfg "$pkgdir"/usr/lib/firmware/BT_FW.cfg
+}

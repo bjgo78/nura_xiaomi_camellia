@@ -1,0 +1,52 @@
+#!/sbin/openrc-run
+
+description="Wi-Fi: push the NVRAM calibration and power on the Wi-Fi function"
+
+NVDATA=/mnt/vendor/nvdata
+
+depend() {
+	need wmt-launcher
+	before networkmanager wpa_supplicant
+}
+
+start() {
+	ebegin "Starting Wi-Fi"
+	mkdir -p "$NVDATA"
+	if ! mountpoint -q "$NVDATA"; then
+		mount -o ro /dev/disk/by-partlabel/nvdata "$NVDATA" || {
+			eend 1 "cannot mount nvdata"
+			return 1
+		}
+	fi
+
+	# gen4m expects "WR-BUF:NVRAM" followed by the calibration file in one write()
+	nvram=$(mktemp)
+	{ printf 'WR-BUF:NVRAM'; cat "$NVDATA/APCFG/APRDEB/WIFI"; } > "$nvram"
+	dd if="$nvram" of=/dev/wmtWifi bs=4096 count=1 2>/dev/null
+	rm -f "$nvram"
+
+	echo 1 > /dev/wmtWifi || {
+		eend 1 "Wi-Fi power on failed"
+		return 1
+	}
+	i=0
+	while [ ! -e /sys/class/net/wlan0 ] && [ $i -lt 50 ]; do
+		sleep 0.2
+		i=$((i + 1))
+	done
+
+	# The driver only takes a country while Wi-Fi is on, and the kernel ignores a
+	# request for the country that is already set, so go through 00.
+	if [ -n "$WIFI_COUNTRY" ]; then
+		iw reg set 00
+		sleep 1
+		iw reg set "$WIFI_COUNTRY"
+	fi
+	eend 0
+}
+
+stop() {
+	ebegin "Stopping Wi-Fi"
+	echo 0 > /dev/wmtWifi
+	eend $?
+}

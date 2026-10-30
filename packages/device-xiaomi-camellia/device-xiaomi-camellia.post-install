@@ -1,0 +1,5 @@
+#!/bin/sh
+for service in wmt-launcher camellia-wifi camellia-battery mark-boot-successful; do
+	rc-update -q add "$service" default
+done
+exit 0

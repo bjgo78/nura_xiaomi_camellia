@@ -2,22 +2,37 @@
 maintainer=""
 pkgname=device-xiaomi-camellia
 pkgver=1
-pkgrel=0
+pkgrel=1
 pkgdesc="Xiaomi Redmi Note 10 5G"
-url="https://nura.eco"
+url="https://github.com/bjgo78/nura_xiaomi_camellia"
 arch="aarch64"
 license="MIT"
 depends="
 	android-tools-mkbootimg
+	firmware-xiaomi-camellia
+	iw
 	linux-xiaomi-camellia
 	postmarketos-base
 	postmarketos-base-downstream
-	"
+	python3
+"
 makedepends="devicepkg-dev"
+install="$pkgname.post-install $pkgname.post-upgrade"
 source="
 	deviceinfo
 	modules-initfs
-	"
+	wmt-loader
+	wmt-launcher
+	wmt-launcher.initd
+	camellia-wifi.initd
+	camellia-wifi.confd
+	mark-boot-successful
+	mark-boot-successful.initd
+	charge-limit
+	camellia-battery.initd
+	camellia-battery.confd
+	50-camellia-unmanaged.conf
+"
 options="!archcheck !check"
 
 build() {
@@ -26,6 +41,19 @@ build() {
 
 package() {
 	devicepkg_package $startdir $pkgname
-}
 
-sha512sums="(run 'pmbootstrap checksum device-xiaomi-camellia' to fill)"
+	install -Dm755 "$srcdir"/wmt-loader "$pkgdir"/usr/libexec/camellia/wmt-loader
+	install -Dm755 "$srcdir"/wmt-launcher "$pkgdir"/usr/libexec/camellia/wmt-launcher
+	install -Dm755 "$srcdir"/mark-boot-successful "$pkgdir"/usr/libexec/camellia/mark-boot-successful
+	install -Dm755 "$srcdir"/charge-limit "$pkgdir"/usr/libexec/camellia/charge-limit
+
+	install -Dm755 "$srcdir"/wmt-launcher.initd "$pkgdir"/etc/init.d/wmt-launcher
+	install -Dm755 "$srcdir"/camellia-wifi.initd "$pkgdir"/etc/init.d/camellia-wifi
+	install -Dm644 "$srcdir"/camellia-wifi.confd "$pkgdir"/etc/conf.d/camellia-wifi
+	install -Dm755 "$srcdir"/mark-boot-successful.initd "$pkgdir"/etc/init.d/mark-boot-successful
+	install -Dm755 "$srcdir"/camellia-battery.initd "$pkgdir"/etc/init.d/camellia-battery
+	install -Dm644 "$srcdir"/camellia-battery.confd "$pkgdir"/etc/conf.d/camellia-battery
+
+	install -Dm644 "$srcdir"/50-camellia-unmanaged.conf \
+		"$pkgdir"/etc/NetworkManager/conf.d/50-camellia-unmanaged.conf
+}

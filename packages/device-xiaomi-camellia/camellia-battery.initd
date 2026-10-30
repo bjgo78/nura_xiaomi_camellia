@@ -1,0 +1,24 @@
+#!/sbin/openrc-run
+
+description="Battery: thermal protection and charge limit for 24/7 operation"
+
+command=/usr/libexec/camellia/charge-limit
+command_args="${CHARGE_START:-75} ${CHARGE_STOP:-80} ${CHARGE_INTERVAL:-60}"
+command_background=yes
+pidfile=/run/camellia-battery.pid
+
+depend() {
+	need localmount
+}
+
+start_pre() {
+	# Android's thermal policy: reset at 60 C battery temperature, polled every second.
+	# The kernel default for this zone has no trip points at all.
+	echo "1 60000 0 mtktsbattery-sysrst 48000 0 no-cooler 46000 0 no-cooler 45000 0 no-cooler 44000 0 no-cooler 43000 0 no-cooler 42000 0 no-cooler 41000 0 no-cooler 40000 0 no-cooler 39000 0 no-cooler 1000" \
+		> /proc/driver/thermal/tzbattery
+}
+
+stop_post() {
+	# leave charging enabled when the limiter is not running
+	echo "0 0" > /proc/mtk_battery_cmd/current_cmd
+}
