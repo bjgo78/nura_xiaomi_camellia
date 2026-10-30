@@ -160,3 +160,9 @@ for header v2); rootfs sector size 4096 (UFS); USB networking uses NCM.
 - Next: firmware-xiaomi-camellia package; OpenRC services for the Wi-Fi chain, NM
   unmanaged config, mark-boot-successful, charge limiter + tzbattery, firmware timeout;
   cfg80211.ieee80211_regdom=HU on the cmdline.
+- Boot 10: 5 GHz works once the driver gets the country while Wi-Fi is on (it skips the
+  regulatory notifier while halted). The driver has its own country table (US, CN, NL, CZ,
+  JP, TR); HU added with the CZ/NL rules. Wi-Fi chain, charge limiter, tzbattery and
+  mark-boot-successful are now OpenRC services in device-xiaomi-camellia (bump pkgrel on
+  every change); firmware is firmware-xiaomi-camellia. tools/update-phone.ps1 installs all
+  three packages and only uses fastboot when /boot/boot.img changed.
