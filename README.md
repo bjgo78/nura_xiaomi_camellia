@@ -166,3 +166,8 @@ for header v2); rootfs sector size 4096 (UFS); USB networking uses NCM.
   mark-boot-successful are now OpenRC services in device-xiaomi-camellia (bump pkgrel on
   every change); firmware is firmware-xiaomi-camellia. tools/update-phone.ps1 installs all
   three packages and only uses fastboot when /boot/boot.img changed.
+- Boot 11: everything starts unattended (zram, wmt-launcher, camellia-wifi, camellia-battery,
+  mark-boot-successful). Fixes: wmt-loader sets the STP mode synchronously (a power-on before
+  the launcher's ioctl failed with "no hif info"), the launcher service waits for
+  /run/wmt-launcher.ready, Wi-Fi power-on retries; kernel allows vm.swappiness up to 200
+  (zramstart sets 180; 4.14 capped it at 100 outside MTK's low-RAM profile).
