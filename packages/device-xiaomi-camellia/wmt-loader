@@ -3,6 +3,8 @@
 # through /dev/wmtdetect (same ioctl sequence as the vendor binary). In built-in mode
 # DO_MODULE_INIT runs do_connectivity_driver_init() once (WMT, BT, GPS, FM, WLAN) and
 # creates /dev/stpwmt and /dev/wmtWifi. It needs WMT_SOC.cfg in /lib/firmware.
+# Afterwards it sets the STP interface mode (the launcher does that too, but asynchronously:
+# a Wi-Fi power-on before it fails with "no hif info").
 import os, fcntl, errno
 
 def IOR(nr):
@@ -24,4 +26,10 @@ adie = fcntl.ioctl(fd, GET_ADIE_CHIP_ID, 0)
 fcntl.ioctl(fd, MODULE_CLEANUP, chip)
 fcntl.ioctl(fd, DO_MODULE_INIT, chip)
 os.close(fd)
-print(f'wmt-loader: SoC 0x{chip:04x}, A-die 0x{adie:04x}, drivers initialised')
+
+WMT_IOCTL_SET_STP_MODE = (1 << 30) | (4 << 16) | (0xa0 << 8) | 5
+STP_BTIF_FULL, WMT_FM_COMM = 0x3, 0x2
+fd = os.open('/dev/stpwmt', os.O_RDWR)
+fcntl.ioctl(fd, WMT_IOCTL_SET_STP_MODE, (WMT_FM_COMM << 4) | STP_BTIF_FULL)
+os.close(fd)
+print(f'wmt-loader: SoC 0x{chip:04x}, A-die 0x{adie:04x}, drivers initialised, STP mode BTIF')

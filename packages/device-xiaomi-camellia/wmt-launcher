@@ -9,6 +9,7 @@
 import os, sys, struct, fcntl, select, glob, signal, time
 
 DEV = '/dev/stpwmt'
+READY = '/run/wmt-launcher.ready'
 FW_DIR = '/lib/firmware'
 WMT_IOC_MAGIC = 0xa0
 
@@ -90,6 +91,9 @@ def main():
 
     poller = select.poll()
     poller.register(fd, select.POLLIN)
+    # tell the init script we are ready to answer requests
+    open(READY, 'w').close()
+    log('ready')
     while True:
         poller.poll()
         cmd = os.read(fd, 256).split(b'\0')[0].decode(errors='replace').strip()

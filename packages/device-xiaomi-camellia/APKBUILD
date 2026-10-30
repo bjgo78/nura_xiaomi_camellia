@@ -2,7 +2,7 @@
 maintainer=""
 pkgname=device-xiaomi-camellia
 pkgver=1
-pkgrel=1
+pkgrel=2
 pkgdesc="Xiaomi Redmi Note 10 5G"
 url="https://github.com/bjgo78/nura_xiaomi_camellia"
 arch="aarch64"

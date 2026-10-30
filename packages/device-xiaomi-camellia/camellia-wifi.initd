@@ -25,10 +25,16 @@ start() {
 	dd if="$nvram" of=/dev/wmtWifi bs=4096 count=1 2>/dev/null
 	rm -f "$nvram"
 
-	echo 1 > /dev/wmtWifi || {
-		eend 1 "Wi-Fi power on failed"
-		return 1
-	}
+	# writing 1 when Wi-Fi is already on succeeds, so retrying is safe
+	tries=0
+	until echo 1 > /dev/wmtWifi 2>/dev/null; do
+		tries=$((tries + 1))
+		if [ $tries -ge 3 ]; then
+			eend 1 "Wi-Fi power on failed"
+			return 1
+		fi
+		sleep 2
+	done
 	i=0
 	while [ ! -e /sys/class/net/wlan0 ] && [ $i -lt 50 ]; do
 		sleep 0.2

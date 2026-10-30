@@ -17,5 +17,18 @@ start_pre() {
 	# The firmware loader falls back to a userspace helper for missing files
 	# (FW_LOADER_USER_HELPER_FALLBACK is forced on); don't wait 60 s for it.
 	echo 1 > /sys/class/firmware/timeout
+	rm -f /run/wmt-launcher.ready
 	/usr/libexec/camellia/wmt-loader
+}
+
+start_post() {
+	# command_background returns at once; only report "started" once the launcher
+	# can answer the ROM patch request of the first Wi-Fi power-on
+	i=0
+	while [ ! -e /run/wmt-launcher.ready ] && [ $i -lt 50 ]; do
+		sleep 0.1
+		i=$((i + 1))
+	done
+	[ -e /run/wmt-launcher.ready ] || ewarn "wmt-launcher not ready after 5 s"
+	return 0
 }
