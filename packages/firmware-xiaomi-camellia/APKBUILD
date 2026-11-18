@@ -1,10 +1,13 @@
-# Connectivity firmware (WMT, Wi-Fi, Bluetooth) for the Xiaomi Redmi Note 10 5G (camellia),
-# from the device's vendor blobs. The _1_1 files are for the MT6631 A-die, _1a_1 for MT6635.
+# Connectivity firmware (WMT, Wi-Fi, Bluetooth) and touchscreen firmware for the Xiaomi
+# Redmi Note 10 5G (camellia), from the device's vendor blobs. The _1_1 files are for the
+# MT6631 A-die, _1a_1 for MT6635. The FT8722 (in-cell touch of the Tianma panel) loses its
+# firmware whenever the panel powers up; the driver downloads focaltech_ts_fw_tianma.bin
+# again on every panel resume.
 pkgname=firmware-xiaomi-camellia
 pkgver=20261027
-pkgrel=0
+pkgrel=1
 _commit=5416db4de44832ee99d1cf1ff7ac1e5274bf05e2
-pkgdesc="Xiaomi Redmi Note 10 5G connectivity firmware"
+pkgdesc="Xiaomi Redmi Note 10 5G connectivity and touchscreen firmware"
 url="https://github.com/bjgo78/vendor_xiaomi_camellia"
 arch="aarch64"
 license="proprietary"
@@ -22,6 +25,7 @@ source="
 	$pkgname-$_commit-wifi.cfg::$url/raw/$_commit/proprietary/vendor/firmware/wifi.cfg
 	$pkgname-$_commit-txpowerctrl.cfg::$url/raw/$_commit/proprietary/vendor/firmware/txpowerctrl.cfg
 	$pkgname-$_commit-BT_FW.cfg::$url/raw/$_commit/proprietary/vendor/firmware/BT_FW.cfg
+	$pkgname-$_commit-focaltech_ts_fw_tianma.bin::$url/raw/$_commit/proprietary/vendor/firmware/focaltech_ts_fw_tianma.bin
 "
 
 package() {
@@ -37,4 +41,6 @@ package() {
 	install -Dm644 "$srcdir"/$pkgname-$_commit-wifi.cfg "$pkgdir"/usr/lib/firmware/wifi.cfg
 	install -Dm644 "$srcdir"/$pkgname-$_commit-txpowerctrl.cfg "$pkgdir"/usr/lib/firmware/txpowerctrl.cfg
 	install -Dm644 "$srcdir"/$pkgname-$_commit-BT_FW.cfg "$pkgdir"/usr/lib/firmware/BT_FW.cfg
+	install -Dm644 "$srcdir"/$pkgname-$_commit-focaltech_ts_fw_tianma.bin \
+		"$pkgdir"/usr/lib/firmware/focaltech_ts_fw_tianma.bin
 }
