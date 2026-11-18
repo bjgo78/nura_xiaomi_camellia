@@ -63,7 +63,11 @@ kmake olddefconfig
 
 missing=0
 while IFS= read -r line; do
-    case "$line" in ''|'# Nura'*) continue ;; esac
+    case "$line" in
+        '') continue ;;
+        '# CONFIG_'*) ;;          # "# CONFIG_FOO is not set" is a real setting
+        '#'*) continue ;;         # any other comment
+    esac
     grep -qxF "$line" "$KOBJ/.config" || { echo "not applied: $line" >&2; missing=1; }
 done < "$KSRC/$FRAGMENT"
 [ "$missing" -eq 0 ] || { echo "fragment options did not stick (unmet dependencies?)" >&2; exit 1; }
