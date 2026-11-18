@@ -7,13 +7,15 @@
 # Usage:  update-phone.sh PHONE [BUILD_HOST]
 #   PHONE       user@address of the phone, e.g. bjozsef@172.16.42.1 (USB) or its Wi-Fi address
 #   BUILD_HOST  user@address of the build host; omit when running on the build host itself
-# Environment: PACKAGES (default: firmware, device and linux packages), PKGDIR (where pmbootstrap
-#   puts packages on the build host, default ~/.local/var/pmbootstrap/packages/edge/aarch64)
+# Environment: PACKAGES (default: firmware, device, linux and, if it was built, camellia-panel),
+#   PKGDIR (where pmbootstrap puts packages on the build host,
+#   default ~/.local/var/pmbootstrap/packages/edge/aarch64)
 set -eu
 
 PHONE=${1:?usage: update-phone.sh user@phone [user@buildhost]}
 BUILD_HOST=${2:-}
-PACKAGES=${PACKAGES:-"firmware-xiaomi-camellia device-xiaomi-camellia linux-xiaomi-camellia"}
+PACKAGES=${PACKAGES:-"firmware-xiaomi-camellia device-xiaomi-camellia linux-xiaomi-camellia camellia-panel"}
+OPTIONAL="camellia-panel"
 PKGDIR=${PKGDIR:-'~/.local/var/pmbootstrap/packages/edge/aarch64'}
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
@@ -30,7 +32,11 @@ newest() {
 files=""
 for pkg in $PACKAGES; do
     src=$(newest "$pkg")
-    [ -n "$src" ] || { echo "no $pkg package found" >&2; exit 1; }
+    if [ -z "$src" ]; then
+        case " $OPTIONAL " in *" $pkg "*) echo "--- $pkg not built, skipped"; continue ;; esac
+        echo "no $pkg package found" >&2
+        exit 1
+    fi
     name=$(basename "$src")
     echo "==> $name"
     if [ -n "$BUILD_HOST" ]; then
