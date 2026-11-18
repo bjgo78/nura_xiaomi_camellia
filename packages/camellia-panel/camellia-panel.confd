@@ -1,0 +1,3 @@
+# Screen-off timeout in seconds without touch input (0 = never). The power key
+# turns the screen off and on at any time.
+PANEL_TIMEOUT=60

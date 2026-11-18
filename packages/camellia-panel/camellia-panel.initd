@@ -2,6 +2,7 @@
 description="On-screen status page and setup UI"
 
 command=/usr/bin/camellia-panel
+command_args="${PANEL_TIMEOUT:-60}"
 command_background=yes
 pidfile=/run/camellia-panel.pid
 output_log=/var/log/camellia-panel.log

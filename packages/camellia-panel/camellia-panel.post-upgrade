@@ -1,0 +1,3 @@
+#!/bin/sh
+rc-update -q add camellia-panel default
+exit 0
