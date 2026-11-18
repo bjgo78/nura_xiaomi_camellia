@@ -2,7 +2,7 @@
 maintainer=""
 pkgname=device-xiaomi-camellia
 pkgver=1
-pkgrel=4
+pkgrel=5
 pkgdesc="Xiaomi Redmi Note 10 5G"
 url="https://github.com/bjgo78/nura_xiaomi_camellia"
 arch="aarch64"
@@ -34,6 +34,7 @@ source="
 	camellia-battery.confd
 	50-camellia-unmanaged.conf
 	camellia-cgroups.conf
+	camellia-touch.files
 "
 options="!archcheck !check"
 
@@ -60,4 +61,8 @@ package() {
 		"$pkgdir"/etc/NetworkManager/conf.d/50-camellia-unmanaged.conf
 	install -Dm644 "$srcdir"/camellia-cgroups.conf \
 		"$pkgdir"/etc/rc.conf.d/50-camellia-cgroups.conf
+	# touch firmware in the initramfs: the driver requests it at probe (1.1 s),
+	# long before the root filesystem with /lib/firmware is mounted
+	install -Dm644 "$srcdir"/camellia-touch.files \
+		"$pkgdir"/usr/share/mkinitfs/files/10-camellia-touch.files
 }
