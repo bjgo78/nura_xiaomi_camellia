@@ -1,6 +1,6 @@
 /* camellia-panel: on-screen UI for the Nura server phone.
- * Step 1 (hardware bring-up): DRM output, touch, backlight, power key blank/wake,
- * one test screen. Status page and setup screens follow. */
+ * DRM output, touch, backlight, power key blank/wake; status page in the first
+ * tab, setup screens (Wi-Fi, battery, power) in the others. */
 #include <errno.h>
 #include <fcntl.h>
 #include <linux/input.h>
@@ -15,6 +15,7 @@
 
 #include "lvgl.h"
 #include "drm_out.h"
+#include "ui.h"
 
 #define CARD        "/dev/dri/card0"
 #define TOUCH_DEV   "/dev/input/event2"
@@ -102,48 +103,93 @@ static void wake(lv_display_t *disp)
 	fprintf(stderr, "screen on\n");
 }
 
-/* ---- test screen ---- */
-static lv_obj_t *count_label;
-static int taps;
+/* ---- layout ---- */
+static lv_obj_t *clock_label, *bat_label;
+static int refresh_count;
 
-static void tap_cb(lv_event_t *e)
+static void top_bar_update(void)
 {
-	(void)e;
-	lv_label_set_text_fmt(count_label, "Taps: %d", ++taps);
+	char buf[16];
+	time_t now = time(NULL);
+	struct tm tm;
+	FILE *f;
+
+	localtime_r(&now, &tm);
+	strftime(buf, sizeof(buf), "%H:%M", &tm);
+	lv_label_set_text(clock_label, buf);
+	f = fopen("/sys/class/power_supply/battery/capacity", "r");
+	if (f) {
+		int cap;
+		if (fscanf(f, "%d", &cap) == 1)
+			lv_label_set_text_fmt(bat_label, "%d %%", cap);
+		fclose(f);
+	}
 }
 
-static void build_test_screen(void)
+static void refresh_cb(lv_timer_t *t)
 {
-	char host[64] = "?";
+	(void)t;
+	if (blanked)
+		return;
+	top_bar_update();
+	status_update(refresh_count++ % 5 == 0);
+}
+
+/* The top 103 px belong to the punch-hole camera: only the clock (left of it)
+ * and the battery level (right of it) go there. */
+static void build_layout(void)
+{
 	lv_obj_t *scr = lv_screen_active();
-	lv_obj_t *l, *btn;
+	lv_obj_t *bar, *tv, *tab, *l;
+	static const char *const names[] = {
+		LV_SYMBOL_HOME " Status", LV_SYMBOL_WIFI " Wi-Fi",
+		LV_SYMBOL_CHARGE " Battery", LV_SYMBOL_POWER " Power",
+	};
 
-	gethostname(host, sizeof(host));
-	lv_obj_set_flex_flow(scr, LV_FLEX_FLOW_COLUMN);
-	lv_obj_set_flex_align(scr, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-	lv_obj_set_style_pad_all(scr, 60, 0);
-	lv_obj_set_style_pad_row(scr, 40, 0);
+	lv_obj_remove_flag(scr, LV_OBJ_FLAG_SCROLLABLE);
 
-	l = lv_label_create(scr);
-	lv_obj_set_style_text_font(l, &lv_font_montserrat_48, 0);
-	lv_label_set_text(l, "Nura - camellia-panel");
+	bar = lv_obj_create(scr);
+	lv_obj_remove_style_all(bar);
+	lv_obj_set_size(bar, out.width, UI_TOP_BAR);
+	lv_obj_align(bar, LV_ALIGN_TOP_MID, 0, 0);
 
-	l = lv_label_create(scr);
-	lv_label_set_text_fmt(l, "Host: %s", host);
+	clock_label = lv_label_create(bar);
+	lv_obj_set_style_text_font(clock_label, &lv_font_montserrat_36, 0);
+	lv_obj_set_style_text_color(clock_label, lv_color_white(), 0);
+	lv_obj_set_width(clock_label, UI_CUTOUT_X1 - 2 * UI_SIDE_PAD);
+	lv_obj_align(clock_label, LV_ALIGN_LEFT_MID, UI_SIDE_PAD + 40, 6);
 
-	btn = lv_button_create(scr);
-	lv_obj_set_size(btn, 600, 200);
-	lv_obj_add_event_cb(btn, tap_cb, LV_EVENT_CLICKED, NULL);
-	l = lv_label_create(btn);
-	lv_label_set_text(l, "Tap me");
-	lv_obj_center(l);
+	bat_label = lv_label_create(bar);
+	lv_obj_set_style_text_font(bat_label, &lv_font_montserrat_36, 0);
+	lv_obj_set_style_text_color(bat_label, lv_color_white(), 0);
+	lv_obj_set_style_text_align(bat_label, LV_TEXT_ALIGN_RIGHT, 0);
+	lv_label_set_text(bat_label, "");
+	lv_obj_set_width(bat_label, out.width - UI_CUTOUT_X2 - 2 * UI_SIDE_PAD);
+	lv_obj_align(bat_label, LV_ALIGN_RIGHT_MID, -(UI_SIDE_PAD + 40), 6);
 
-	count_label = lv_label_create(scr);
-	lv_label_set_text(count_label, "Taps: 0");
+	tv = lv_tabview_create(scr);
+	lv_obj_set_size(tv, out.width, out.height - UI_TOP_BAR);
+	lv_obj_align(tv, LV_ALIGN_BOTTOM_MID, 0, 0);
+	lv_tabview_set_tab_bar_position(tv, LV_DIR_BOTTOM);
+	lv_tabview_set_tab_bar_size(tv, UI_TAB_BAR);
+	/* keep the tab buttons out of the rounded bottom corners */
+	lv_obj_set_style_pad_hor(lv_tabview_get_tab_bar(tv), UI_SIDE_PAD, 0);
+	lv_obj_set_style_pad_bottom(lv_tabview_get_tab_bar(tv), 30, 0);
+	lv_obj_set_style_text_font(lv_tabview_get_tab_bar(tv), &lv_font_montserrat_28, 0);
 
-	l = lv_label_create(scr);
-	lv_obj_set_style_text_font(l, &lv_font_montserrat_28, 0);
-	lv_label_set_text_fmt(l, "Screen turns off after %u s.\nPower key: off / on.", blank_ms / 1000);
+	for (unsigned i = 0; i < 4; i++) {
+		tab = lv_tabview_add_tab(tv, names[i]);
+		if (i == 0) {
+			status_create(tab);
+		} else {
+			l = lv_label_create(tab);
+			lv_label_set_text(l, "Coming next.");
+			lv_obj_center(l);
+		}
+	}
+
+	top_bar_update();
+	lv_timer_create(refresh_cb, 2000, NULL);
 }
 
 static void on_signal(int sig)
@@ -195,7 +241,7 @@ int main(int argc, char **argv)
 	if (keys < 0 || ioctl(keys, EVIOCGRAB, 1) < 0)
 		fprintf(stderr, "keys: %s: %s\n", KEYS_DEV, strerror(errno));
 
-	build_test_screen();
+	build_layout();
 
 	while (!quit) {
 		uint32_t next = lv_timer_handler();
