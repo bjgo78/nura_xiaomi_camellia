@@ -23,8 +23,10 @@ deviceinfo_usb_idProduct="0x0104"
 
 # Bootloader related
 deviceinfo_flash_method="fastboot"
-# bootopt is read by LK; initcall_debug=0 overrides initcall_debug=1 from the dts bootargs
-deviceinfo_kernel_cmdline="bootopt=64S3,32N2,64N2 initcall_debug=0 PMOS_NOSPLASH"
+# bootopt is read by LK; initcall_debug=0 overrides initcall_debug=1 from the dts bootargs.
+# cgroup_disable=schedtune: Android's EAS boost controller allows only a few groups and
+# fails with ENOMEM beyond them, which breaks every container start in hybrid mode.
+deviceinfo_kernel_cmdline="bootopt=64S3,32N2,64N2 initcall_debug=0 PMOS_NOSPLASH cgroup_disable=schedtune"
 deviceinfo_generate_bootimg="true"
 deviceinfo_flash_pagesize="2048"
 deviceinfo_bootimg_qcdt="false"

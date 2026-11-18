@@ -2,7 +2,7 @@
 maintainer=""
 pkgname=device-xiaomi-camellia
 pkgver=1
-pkgrel=3
+pkgrel=4
 pkgdesc="Xiaomi Redmi Note 10 5G"
 url="https://github.com/bjgo78/nura_xiaomi_camellia"
 arch="aarch64"
@@ -33,6 +33,7 @@ source="
 	camellia-battery.initd
 	camellia-battery.confd
 	50-camellia-unmanaged.conf
+	camellia-cgroups.conf
 "
 options="!archcheck !check"
 
@@ -57,4 +58,6 @@ package() {
 
 	install -Dm644 "$srcdir"/50-camellia-unmanaged.conf \
 		"$pkgdir"/etc/NetworkManager/conf.d/50-camellia-unmanaged.conf
+	install -Dm644 "$srcdir"/camellia-cgroups.conf \
+		"$pkgdir"/etc/rc.conf.d/50-camellia-cgroups.conf
 }
