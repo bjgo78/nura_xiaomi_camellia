@@ -6,7 +6,7 @@ CFLAGS ?= -O2
 CFLAGS += -Wall -I. -I$(LVGL_DIR) -DLV_CONF_INCLUDE_SIMPLE $(shell pkg-config --cflags libdrm)
 LDLIBS += $(shell pkg-config --libs libdrm) -lm
 
-SRCS := main.c drm_out.c status.c $(shell find $(LVGL_DIR)/src -name '*.c')
+SRCS := main.c drm_out.c status.c dialog.c exec.c wifi.c battery.c power.c $(shell find $(LVGL_DIR)/src -name '*.c')
 OBJS := $(SRCS:%.c=build/%.o)
 
 camellia-panel: $(OBJS)

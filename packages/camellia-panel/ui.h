@@ -18,5 +18,16 @@ lv_obj_t *ui_row(lv_obj_t *card, const char *key);
 
 void status_create(lv_obj_t *tab);
 void status_update(int slow);
+void wifi_create(lv_obj_t *tab);
+void battery_create(lv_obj_t *tab);
+void power_create(lv_obj_t *tab);
+
+/* modal message box; buttons added with ui_dialog_button() close it before
+ * their callback runs */
+typedef void (*ui_action_cb)(void *user);
+lv_obj_t *ui_dialog(const char *title, const char *text);
+void ui_dialog_button(lv_obj_t *dlg, const char *txt, ui_action_cb cb, void *user);
+lv_obj_t *ui_button(lv_obj_t *parent, const char *txt, lv_event_cb_t cb, void *user);
+void ui_set_status(lv_obj_t *label, int ok, const char *text);
 
 #endif

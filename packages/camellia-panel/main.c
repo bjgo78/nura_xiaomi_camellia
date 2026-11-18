@@ -140,7 +140,7 @@ static void refresh_cb(lv_timer_t *t)
 static void build_layout(void)
 {
 	lv_obj_t *scr = lv_screen_active();
-	lv_obj_t *bar, *tv, *tab, *l;
+	lv_obj_t *bar, *tv, *tab;
 	static const char *const names[] = {
 		LV_SYMBOL_HOME " Status", LV_SYMBOL_WIFI " Wi-Fi",
 		LV_SYMBOL_CHARGE " Battery", LV_SYMBOL_POWER " Power",
@@ -179,13 +179,14 @@ static void build_layout(void)
 
 	for (unsigned i = 0; i < 4; i++) {
 		tab = lv_tabview_add_tab(tv, names[i]);
-		if (i == 0) {
+		if (i == 0)
 			status_create(tab);
-		} else {
-			l = lv_label_create(tab);
-			lv_label_set_text(l, "Coming next.");
-			lv_obj_center(l);
-		}
+		else if (i == 1)
+			wifi_create(tab);
+		else if (i == 2)
+			battery_create(tab);
+		else
+			power_create(tab);
 	}
 
 	top_bar_update();
