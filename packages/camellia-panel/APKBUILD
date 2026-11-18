@@ -1,13 +1,14 @@
 # On-screen UI for the Nura server phone: status page and setup screens on the
 # 1080x2400 panel, drawn with LVGL into a DRM dumb buffer, touch through evdev.
 pkgname=camellia-panel
-pkgver=0.6
+pkgver=0.7
 pkgrel=0
 _lvglver=9.5.0
-pkgdesc="Status page and setup UI on the screen of the Xiaomi Redmi Note 10 5G"
+pkgdesc="Status page, setup UI and boot splash on the screen of the Xiaomi Redmi Note 10 5G"
 url="https://github.com/bjgo78/nura_xiaomi_camellia"
 arch="aarch64"
 license="MIT"
+depends="plymouth"
 makedepends="libdrm-dev linux-headers"
 install="$pkgname.post-install $pkgname.post-upgrade $pkgname.pre-deinstall"
 source="
@@ -27,6 +28,12 @@ source="
 	power.c
 	camellia-panel.initd
 	camellia-panel.confd
+	nura-camellia.plymouth
+	nura-camellia.script
+	nura-logo.png
+	nura-bar-bg.png
+	nura-bar-fg.png
+	camellia-splash.files
 "
 builddir="$srcdir"
 options="!check"
@@ -39,4 +46,9 @@ package() {
 	make LVGL_DIR="lvgl-$_lvglver" DESTDIR="$pkgdir" install
 	install -Dm755 camellia-panel.initd "$pkgdir"/etc/init.d/camellia-panel
 	install -Dm644 camellia-panel.confd "$pkgdir"/etc/conf.d/camellia-panel
+	for f in nura-camellia.plymouth nura-camellia.script nura-logo.png nura-bar-bg.png nura-bar-fg.png; do
+		install -Dm644 "$f" "$pkgdir"/usr/share/plymouth/themes/nura-camellia/"$f"
+	done
+	# the theme must be in the initramfs, where Plymouth starts
+	install -Dm644 camellia-splash.files "$pkgdir"/usr/share/mkinitfs/files/50-camellia-splash.files
 }

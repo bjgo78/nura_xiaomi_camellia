@@ -1,3 +1,14 @@
 #!/bin/sh
 rc-update -q add camellia-panel default
+
+# boot splash theme (the initramfs is rebuilt by the mkinitfs trigger)
+conf=/etc/plymouth/plymouthd.conf
+mkdir -p /etc/plymouth
+if grep -q '^Theme=' "$conf" 2>/dev/null; then
+	sed -i 's/^Theme=.*/Theme=nura-camellia/' "$conf"
+elif grep -q '^\[Daemon\]' "$conf" 2>/dev/null; then
+	sed -i 's/^\[Daemon\]$/[Daemon]\nTheme=nura-camellia/' "$conf"
+else
+	printf '[Daemon]\nTheme=nura-camellia\n' >> "$conf"
+fi
 exit 0
