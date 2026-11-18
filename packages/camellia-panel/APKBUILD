@@ -2,7 +2,7 @@
 # 1080x2400 panel, drawn with LVGL into a DRM dumb buffer, touch through evdev.
 pkgname=camellia-panel
 pkgver=0.3
-pkgrel=0
+pkgrel=1
 _lvglver=9.5.0
 pkgdesc="Status page and setup UI on the screen of the Xiaomi Redmi Note 10 5G"
 url="https://github.com/bjgo78/nura_xiaomi_camellia"

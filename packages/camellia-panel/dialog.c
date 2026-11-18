@@ -38,7 +38,6 @@ lv_obj_t *ui_dialog(const char *title, const char *text)
 	lv_obj_set_style_pad_all(current, 30, 0);
 	lv_msgbox_add_title(current, title);
 	lv_msgbox_add_text(current, text);
-	lv_obj_set_height(lv_msgbox_get_footer(current), 160);
 	return current;
 }
 
@@ -49,6 +48,8 @@ void ui_dialog_button(lv_obj_t *dlg, const char *txt, ui_action_cb cb, void *use
 
 	b->cb = cb;
 	b->user = user;
+	/* the footer only exists once the first button is added */
+	lv_obj_set_height(lv_msgbox_get_footer(dlg), 160);
 	lv_obj_set_flex_grow(btn, 1);
 	lv_obj_set_height(btn, 120);
 	lv_obj_add_event_cb(btn, dlg_btn_cb, LV_EVENT_CLICKED, b);
