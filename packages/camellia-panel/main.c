@@ -212,8 +212,20 @@ int main(int argc, char **argv)
 	signal(SIGTERM, on_signal);
 	signal(SIGINT, on_signal);
 
-	if (drm_out_open(&out, CARD))
-		return 1;
+	/* The boot splash (Plymouth) holds the display until the end of the boot;
+	 * its OpenRC plugin quits it once the default runlevel is up. */
+	for (int i = 0; i < 900 && !quit && system("plymouth --ping 2>/dev/null") == 0; i++) {
+		if (i == 0)
+			fprintf(stderr, "waiting for plymouth to quit\n");
+		usleep(200000);
+	}
+	/* another program may still hold the display for a moment */
+	for (int i = 0; drm_out_open(&out, CARD); i++) {
+		drm_out_close(&out);
+		if (i == 50 || quit)
+			return 1;
+		usleep(200000);
+	}
 
 	brightness = read_int(BACKLIGHT "/brightness");
 	if (brightness <= 0) {

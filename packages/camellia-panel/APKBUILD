@@ -1,7 +1,7 @@
 # On-screen UI for the Nura server phone: status page and setup screens on the
 # 1080x2400 panel, drawn with LVGL into a DRM dumb buffer, touch through evdev.
 pkgname=camellia-panel
-pkgver=0.5
+pkgver=0.6
 pkgrel=0
 _lvglver=9.5.0
 pkgdesc="Status page and setup UI on the screen of the Xiaomi Redmi Note 10 5G"

@@ -174,7 +174,13 @@ void drm_out_close(struct drm_out *o)
 		munmap(o->map, o->size);
 	if (o->fb_id)
 		drmModeRmFB(o->fd, o->fb_id);
+	if (o->handle) {
+		struct drm_mode_destroy_dumb dreq = { .handle = o->handle };
+		drmIoctl(o->fd, DRM_IOCTL_MODE_DESTROY_DUMB, &dreq);
+	}
 	if (o->fd >= 0)
 		close(o->fd);
 	free(o->mode);
+	memset(o, 0, sizeof(*o));
+	o->fd = -1;
 }
