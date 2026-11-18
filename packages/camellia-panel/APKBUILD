@@ -1,0 +1,31 @@
+# On-screen UI for the Nura server phone: status page and setup screens on the
+# 1080x2400 panel, drawn with LVGL into a DRM dumb buffer, touch through evdev.
+pkgname=camellia-panel
+pkgver=0.1
+pkgrel=0
+_lvglver=9.5.0
+pkgdesc="Status page and setup UI on the screen of the Xiaomi Redmi Note 10 5G"
+url="https://github.com/bjgo78/nura_xiaomi_camellia"
+arch="aarch64"
+license="MIT"
+makedepends="libdrm-dev linux-headers"
+source="
+	lvgl-$_lvglver.tar.gz::https://github.com/lvgl/lvgl/archive/refs/tags/v$_lvglver.tar.gz
+	Makefile
+	lv_conf.h
+	main.c
+	drm_out.c
+	drm_out.h
+	camellia-panel.initd
+"
+builddir="$srcdir"
+options="!check"
+
+build() {
+	make LVGL_DIR="lvgl-$_lvglver"
+}
+
+package() {
+	make LVGL_DIR="lvgl-$_lvglver" DESTDIR="$pkgdir" install
+	install -Dm755 camellia-panel.initd "$pkgdir"/etc/init.d/camellia-panel
+}
