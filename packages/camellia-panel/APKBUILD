@@ -1,14 +1,14 @@
 # On-screen UI for the Nura server phone: status page and setup screens on the
 # 1080x2400 panel, drawn with LVGL into a DRM dumb buffer, touch through evdev.
 pkgname=camellia-panel
-pkgver=0.7
+pkgver=0.10
 pkgrel=0
 _lvglver=9.5.0
 pkgdesc="Status page, setup UI and boot splash on the screen of the Xiaomi Redmi Note 10 5G"
 url="https://github.com/bjgo78/nura_xiaomi_camellia"
 arch="aarch64"
 license="MIT"
-depends="plymouth"
+depends="font-dejavu plymouth"
 makedepends="libdrm-dev linux-headers"
 install="$pkgname.post-install $pkgname.post-upgrade $pkgname.pre-deinstall"
 source="
@@ -24,6 +24,8 @@ source="
 	exec.c
 	exec.h
 	wifi.c
+	keyboard.c
+	keyboard.h
 	battery.c
 	power.c
 	camellia-panel.initd

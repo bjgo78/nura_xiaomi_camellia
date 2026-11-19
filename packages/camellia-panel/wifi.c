@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "exec.h"
+#include "keyboard.h"
 #include "ui.h"
 
 #define MAX_NETS 48
@@ -418,7 +419,7 @@ static void form_update(void)
 
 static void kb_show(lv_obj_t *ta)
 {
-	lv_keyboard_set_textarea(f.kb, ta);
+	kb_set_textarea(f.kb, ta);
 	lv_obj_remove_flag(f.kb, LV_OBJ_FLAG_HIDDEN);
 	lv_obj_update_layout(f.overlay);
 	lv_obj_set_height(f.panel, lv_obj_get_y(f.kb) - lv_obj_get_y(f.panel) - 30);
@@ -441,7 +442,7 @@ static void kb_cb(lv_event_t *e)
 {
 	lv_event_code_t code = lv_event_get_code(e);
 
-	if (code == LV_EVENT_READY || code == LV_EVENT_CANCEL)
+	if (code == LV_EVENT_READY)
 		kb_hide();
 }
 
@@ -497,6 +498,7 @@ static lv_obj_t *text_row(const char *label, const char *hint, int password)
 	lv_obj_t *ta = form_row(label, lv_textarea_create);
 
 	lv_textarea_set_one_line(ta, true);
+	lv_obj_set_style_text_font(ta, kb_text_font(), 0); /* accented letters */
 	lv_textarea_set_password_mode(ta, password);
 	lv_textarea_set_placeholder_text(ta, hint);
 	lv_obj_add_event_cb(ta, ta_cb, LV_EVENT_FOCUSED, NULL);
@@ -570,11 +572,8 @@ static void open_form(int hidden, int sec)
 	ui_button(row, "Cancel", btn_cb, NULL);
 	ui_button(row, "Connect", btn_cb, (void *)1);
 
-	f.kb = lv_keyboard_create(f.overlay);
-	lv_obj_set_size(f.kb, lv_pct(96), 860);
-	lv_obj_align(f.kb, LV_ALIGN_BOTTOM_MID, 0, -50); /* clear of the rounded corners */
-	lv_obj_set_style_text_font(f.kb, &lv_font_montserrat_36, 0);
-	lv_obj_add_event_cb(f.kb, kb_cb, LV_EVENT_ALL, NULL);
+	f.kb = kb_create(f.overlay);
+	lv_obj_add_event_cb(f.kb, kb_cb, LV_EVENT_READY, NULL);
 
 	kb_hide();
 	form_update();

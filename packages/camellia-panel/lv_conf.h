@@ -26,4 +26,8 @@
 
 #define LV_THEME_DEFAULT_DARK 1
 
+/* DejaVu Sans (font-dejavu) at run time: accented letters of the keyboard */
+#define LV_USE_TINY_TTF 1
+#define LV_TINY_TTF_CACHE_GLYPH_CNT 256
+
 #endif /* LV_CONF_H */

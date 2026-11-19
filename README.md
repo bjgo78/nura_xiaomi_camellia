@@ -198,7 +198,8 @@ Packages the prebuilt kernel from `dist/` (pmbootstrap does not build it). `modu
 ### `camellia-panel` (optional)
 
 On-screen UI and the splash theme; see [On-screen panel](#on-screen-panel) and
-[Boot splash](#boot-splash). The device package does not depend on it.
+[Boot splash](#boot-splash). The device package does not depend on it. Depends on `font-dejavu`
+for the accented letters of the keyboard.
 
 ## Hardware notes
 
@@ -297,6 +298,7 @@ service `camellia-panel` in the default runlevel, enabled by the package's post-
 | `main.c` | LVGL setup (partial rendering, 200-line buffers copied into the dumb buffer), evdev touch, power key (grabbed with `EVIOCGRAB`), screen-off timeout, tab layout, waits for Plymouth |
 | `status.c` | Status page, refreshed every 2 s while the screen is on (nmcli every 10 s) |
 | `wifi.c` | Wi-Fi list and the network form |
+| `keyboard.c` | On-screen keyboard of the network form |
 | `battery.c` | Charge limit |
 | `power.c` | Reboot, power off |
 | `exec.c` | fork/execvp with a pipe read from an LVGL timer: commands never block the UI and never pass through a shell |
@@ -313,6 +315,24 @@ service `camellia-panel` in the default runlevel, enabled by the package's post-
   `802-1x.*`: EAP PEAP/TTLS/TLS/PWD, phase 2 MSCHAPv2/PAP/MSCHAP/GTC, identity, anonymous
   identity, password or client certificate, private key and key password, system CA store with
   `domain-suffix-match` or no validation), then `nmcli connection up`.
+- Keyboard (`keyboard.c`, replaces LVGL's `lv_keyboard`): Gboard-style, full width, 4 rows of
+  150 px with the bottom row 90 px above the panel edge (rounded corners); letter keys on an even
+  grid of 10 columns. Layouts English (US) QWERTY and Hungarian QWERTZ (plain QWERTZ like Gboard:
+  every accent on long press, á é í ó ö ő ú ü ű first), picked from a list behind the globe key (or
+  a long press on space) and saved as `KEYBOARD_LAYOUT` (`en`/`hu`) in
+  `/etc/conf.d/camellia-panel`, again only that line. Pages `?123` and `=\<` hold every printable
+  ASCII character. Shift is one-shot (off after the next character); a double tap within 400 ms
+  locks caps. Long press opens the alternates like Gboard: the default option sits right above
+  the finger (typed when released without sliding), the others spread away from the nearer screen
+  edge; slide to pick, release to type. The default is the digit on the top letter row (shown in
+  the key's corner), otherwise the first accent; in Hungarian e u i o open on é ú í ó with the
+  digit next to it on the other side. Backspace deletes on press and repeats while held; the check key
+  hides the keyboard. Keys never take the focus from the text field and never start a scroll
+  (the slide over the alternates must stay a press).
+- Fonts: the built-in Montserrat has only ASCII. DejaVu Sans
+  (`/usr/share/fonts/dejavu/DejaVuSans.ttf`) is loaded with LVGL's Tiny TTF (`LV_USE_TINY_TTF`)
+  as the fallback font of the keys and the form's text fields; without the file the keyboard
+  works but accented letters show as nothing.
 - Battery: rewrites only `CHARGE_START`/`CHARGE_STOP` in `/etc/conf.d/camellia-battery`
   (atomically) and restarts `camellia-battery`.
 - Startup: waits while `plymouth --ping` answers (at most 3 minutes), then retries opening the
@@ -365,6 +385,7 @@ service `camellia-panel` in the default runlevel, enabled by the package's post-
 | Touch dead after boot until the screen goes off and on, dmesg `fts_fwupg_get_fw_file: fw file len(0) fail` at about 61 s | The running boot image has no touch firmware in its initramfs | `zcat /boot/initramfs \| cpio -t \| grep focal`; flash the current `/boot/boot.img` |
 | Screen stays on the Redmi logo | Panel not installed or not running | `rc-status \| grep camellia-panel`, `sudo tail /var/log/camellia-panel.log` |
 | Panel never appears after the splash, log `drmModeSetCrtc: Permission denied`, service `crashed` | Panel older than 0.6 | Update `camellia-panel` |
+| Accented letters missing on the keyboard, log `keyboard: DejaVu Sans not found` | `font-dejavu` not installed | `sudo apk add font-dejavu`, `sudo rc-service camellia-panel restart` |
 | Splash black or text only | Command line or kernel | `cat /proc/cmdline` must show `splash plymouth.ignore-serial-consoles`; `sudo modetest -M mediatek -c \| grep -c Writeback` must print 0 |
 | Docker: `runc did not terminate successfully: exit status 2` | runc on 4.14 | crun as default runtime |
 | Docker: `.../schedtune/...: Out of memory` | Boot image without `cgroup_disable=schedtune` | Flash the current boot image |
@@ -453,7 +474,7 @@ journal of an uncleanly unmounted filesystem.
 | --- | --- |
 | `/etc/conf.d/camellia-wifi` | `WIFI_COUNTRY` |
 | `/etc/conf.d/camellia-battery` | `CHARGE_START`, `CHARGE_STOP`, `CHARGE_INTERVAL` |
-| `/etc/conf.d/camellia-panel` | `PANEL_TIMEOUT` |
+| `/etc/conf.d/camellia-panel` | `PANEL_TIMEOUT`, `KEYBOARD_LAYOUT` |
 | `/usr/libexec/camellia/` | `wmt-loader`, `wmt-launcher`, `mark-boot-successful`, `charge-limit` |
 | `/etc/NetworkManager/conf.d/50-camellia-unmanaged.conf` | NetworkManager off `ap0`, `p2p0` |
 | `/etc/rc.conf.d/50-camellia-cgroups.conf` | `rc_cgroup_mode="hybrid"` |
@@ -475,3 +496,5 @@ journal of an uncleanly unmounted filesystem.
 | Boot 8-11 | zram, A/B slot marking, Wi-Fi chain as services, 5 GHz with HU, unattended boot |
 | 2026-11 | Standalone toolchain, update script, sftp, firewall |
 | 2026-11-18 | Container kernel options, hybrid cgroups, schedtune off, crun; touch firmware (package and initramfs); `camellia-panel` (status, Wi-Fi incl. hidden and enterprise, battery, power); idle-sleep kernel patches (load 17 -> 1); writeback connectors hidden; Plymouth splash with the `nura-camellia` theme; update script for Windows |
+| 2026-11-19 | `camellia-panel` 0.8: Gboard-style keyboard (English US / Hungarian, symbol pages, long-press accents and digits, one-shot shift, caps lock) |
+| 2026-11-19 | `camellia-panel` 0.10: long-press pop-up opens with its default above the finger; Hungarian e u i o default to é ú í ó |

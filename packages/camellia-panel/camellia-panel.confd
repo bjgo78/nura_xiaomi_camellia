@@ -1,3 +1,7 @@
 # Screen-off timeout in seconds without touch input (0 = never). The power key
 # turns the screen off and on at any time.
 PANEL_TIMEOUT=60
+
+# Keyboard language of the setup screens: en (English US, QWERTY) or hu (Hungarian,
+# QWERTZ). The globe key on the keyboard changes it and saves it here.
+KEYBOARD_LAYOUT=en
