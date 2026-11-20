@@ -1,7 +1,7 @@
 # Nura on Xiaomi Redmi Note 10 5G (camellia)
 
 Downstream Nura (postmarketOS) port for camellia, used as a headless Linux server: Wi-Fi, USB
-networking, charging with a charge limit, thermal protection, zram swap, Docker, and an optional
+networking, wired Ethernet through a USB-C dock (OTG), charging with a charge limit, thermal protection, zram swap, Docker, and an optional
 on-screen panel with a boot splash. Kept fully separate from the LineageOS branches.
 
 The step-by-step build and flash guide is [BUILD.md](BUILD.md). This README holds the technical
@@ -151,8 +151,9 @@ On top of `lineage-22.2`:
 
 | Change | Why |
 | --- | --- |
-| `camellia_nura.config` (base) | devtmpfs, VT, SysV IPC, USB NCM gadget, USB Ethernet for OTG, in-kernel fuel gauge, user namespaces, uevent helper, nftables (with 4.14's separate meta and set modules), zstd; fbcon off |
+| `camellia_nura.config` (base) | devtmpfs, VT, SysV IPC, USB NCM gadget, USB Ethernet for OTG (CDC ECM/NCM, ASIX AX88179, Realtek RTL8152/8153 with `USB_RTL8152`), in-kernel fuel gauge, user namespaces, uevent helper, nftables (with 4.14's separate meta and set modules), zstd; fbcon off |
 | `camellia_nura.config` (containers) | All that moby's `contrib/check-config.sh` lists as necessary (device cgroup, POSIX message queues, addrtype and ipvs matches), plus CPU bandwidth, block throttling, perf/net_prio/net_cls cgroups, IPVS, VXLAN, bridge VLAN filtering, macvlan, ipvlan with `NET_L3_MASTER_DEV`, `nft_fwd_netdev` |
+| `USB_POWER_DELIVERY` on | Xiaomi turned it off in every camellia defconfig, so the MT6360 TCPC only did plain Type-C: a dock with a charger on its PD port is the power source, the phone attached as sink and stayed in device mode. With PD the phone negotiates a contract and does data and power role swaps (OTG Ethernet) |
 | `MTK_BATTERY_KERNEL_GAUGE` | Runs the in-kernel (recovery) gauge algorithm in normal boot; Android's `fuelgauged` does not exist here. Default `n` |
 | `ANDROID_DEFAULT_SETTING` no longer selects `STATIC_USERMODEHELPER` | Every usermode helper (uevent helper, poweroff/reboot) went to the Android-only `/system_ext/bin/aee_core_forwarder` |
 | `FW_LOADER_USER_HELPER_FALLBACK` stays on | Selected by `MEDIATEK_SOLUTION`; a missing file waits for a userspace helper (the device package sets the timeout to 1 s early in boot) |
@@ -261,6 +262,33 @@ known.
 - Xiaomi's driver can start the resume download twice at once (IRQ thread and resume work); one
   fails, the other succeeds. Seen once, harmless so far.
 
+### USB OTG Ethernet
+
+- Tested with a Vention 8-in-1 USB-C dock (TGUHB): its Ethernet is a Realtek RTL8153
+  (`0bda:8153`, driver `r8152`, `eth0`). The phone's port is USB 2.0 (MUSB), so the link runs at
+  about 300 Mbit/s even on gigabit.
+- Without a charger on the dock the phone is the source and powers it (`Attached.SRC`, MUSB host).
+- With a charger on the dock's PD port the dock is the source: the phone attaches as sink, PD
+  negotiates 5 V (the DT's only sink PDO), and the dock's data role swap makes the phone the host
+  (`TCPC-PE-EVT:dr_swap`, `TCP_NOTIFY_DR_SWAP`). Without `USB_POWER_DELIVERY` no PD contract came
+  up (`pd:0:0`, 5 V 1.5 A Type-C only) and the dock never enumerated.
+- Charger plugged in while the phone powers the dock: PD power role swap (`pr_swap`), no detach,
+  `eth0` stays up. Charger removed: the dock loses power, the phone sees a detach and attaches as
+  source; `eth0` is back after about 6 s.
+- Charges through the dock, and the charge limiter works the same way (`Not charging`, the phone
+  runs from the charger).
+- The USB network to the computer (`usb0`, 172.16.42.1) is gone while the dock is attached; SSH
+  over Wi-Fi or Ethernet.
+- NetworkManager runs `eth0` with DHCP and IPv6 by default; Ethernet has route metric 100 and
+  Wi-Fi 600, so Ethernet is preferred while both stay up. Static settings: the panel's LAN tab
+  (`camellia-eth` profile, below).
+- `pe_ready` in `/sys/class/tcpc/type_c_port0` stays `no` with the dock; contract and swaps work
+  anyway.
+
+Checks: `cat /sys/class/typec/port0/data_role /sys/class/typec/port0/power_role` (host, and sink
+with the charger or source without), `cat /sys/bus/usb/devices/*/product`,
+`sudo dmesg | grep -iE 'TYPEC:|PE-EVT|otg_tcp_notifier|r8152'`.
+
 ### Keys
 
 `mtk-kpd`, `/dev/input/event1`: `KEY_POWER`, `KEY_VOLUMEUP`, `KEY_VOLUMEDOWN`.
@@ -298,6 +326,7 @@ service `camellia-panel` in the default runlevel, enabled by the package's post-
 | `main.c` | LVGL setup (partial rendering, 200-line buffers copied into the dumb buffer), evdev touch, power key (grabbed with `EVIOCGRAB`), screen-off timeout, tab layout, waits for Plymouth |
 | `status.c` | Status page, refreshed every 2 s while the screen is on (nmcli every 10 s) |
 | `wifi.c` | Wi-Fi list and the network form |
+| `lan.c` | Ethernet (`eth0`) status and the IPv4/IPv6 form |
 | `keyboard.c` | On-screen keyboard of the network form |
 | `battery.c` | Charge limit |
 | `power.c` | Reboot, power off |
@@ -315,6 +344,16 @@ service `camellia-panel` in the default runlevel, enabled by the package's post-
   `802-1x.*`: EAP PEAP/TTLS/TLS/PWD, phase 2 MSCHAPv2/PAP/MSCHAP/GTC, identity, anonymous
   identity, password or client certificate, private key and key password, system CA store with
   `domain-suffix-match` or no validation), then `nmcli connection up`.
+- LAN: link state, speed and duplex from `/sys/class/net/eth0`, addresses with prefix from
+  `getifaddrs()` (IPv6 without link-local), gateways and DNS from `nmcli device show eth0`, every
+  10 s. Settings live in one profile, `camellia-eth`, bound to `eth0`. The form has a method per
+  family (Automatic / Manual / Disabled), address/prefix, gateway, DNS 1 and DNS 2; DNS servers
+  with Automatic replace the ones from DHCP or router advertisements (`ignore-auto-dns`). Every
+  address is checked with `inet_pton()` before anything changes. Save deletes `camellia-eth`,
+  any profile on `eth0` and NetworkManager's automatic `Wired connection N` (NetworkManager then
+  does not create them again for that adapter), adds `camellia-eth` and brings it up when a cable
+  is in; otherwise it applies on the next plug-in. The address fields open the keyboard on its
+  `?123` page.
 - Keyboard (`keyboard.c`, replaces LVGL's `lv_keyboard`): Gboard-style, full width, 4 rows of
   150 px with the bottom row 90 px above the panel edge (rounded corners); letter keys on an even
   grid of 10 columns. Layouts English (US) QWERTY and Hungarian QWERTZ (plain QWERTZ like Gboard:
@@ -387,6 +426,9 @@ service `camellia-panel` in the default runlevel, enabled by the package's post-
 | Panel never appears after the splash, log `drmModeSetCrtc: Permission denied`, service `crashed` | Panel older than 0.6 | Update `camellia-panel` |
 | Accented letters missing on the keyboard, log `keyboard: DejaVu Sans not found` | `font-dejavu` not installed | `sudo apk add font-dejavu`, `sudo rc-service camellia-panel restart` |
 | Splash black or text only | Command line or kernel | `cat /proc/cmdline` must show `splash plymouth.ignore-serial-consoles`; `sudo modetest -M mediatek -c \| grep -c Writeback` must print 0 |
+| Dock with a charger on its PD port: nothing on USB, `data_role` shows `[device]` | Kernel without `USB_POWER_DELIVERY` (no PD contract, no data role swap) | `grep USB_POWER_DELIVERY ~/android/nura/dist/config-xiaomi-camellia.aarch64`; flash the current boot image |
+| Dock on USB but no `eth0` | Adapter chip without a driver in the kernel | `cat /sys/bus/usb/devices/*/idVendor` / `idProduct`; add its `USB_NET_*` / `USB_RTL8152` option to `camellia_nura.config` |
+| `eth0` up but the panel's static settings are not used | Another profile took `eth0` | `nmcli connection show`; save once on the LAN tab (removes the others) |
 | Docker: `runc did not terminate successfully: exit status 2` | runc on 4.14 | crun as default runtime |
 | Docker: `.../schedtune/...: Out of memory` | Boot image without `cgroup_disable=schedtune` | Flash the current boot image |
 | `docker info`: `No cpu cfs quota support`, `No cpuset support` | cgroups in unified mode | `/etc/rc.conf.d/50-camellia-cgroups.conf` must set `rc_cgroup_mode="hybrid"`; reboot |
@@ -446,7 +488,7 @@ journal of an uncleanly unmounted filesystem.
 | --- | --- |
 | GPU, modem, camera, audio | Not supported (downstream kernel without the Android userspace they need) |
 | Bluetooth, GPS, FM, sensors, IR, vibration | Drivers load; not brought up yet |
-| USB OTG Ethernet | Kernel options on; not tested (no adapter) |
+| USB OTG Ethernet | Works with a USB-C dock (RTL8153), with or without a charger on its PD port; USB 2.0 port (about 300 Mbit/s); the USB network to the computer is gone while the dock is attached |
 | Kernel console | fbcon off (fbdev has no kernel mapping) |
 | Wi-Fi | WPA3-only did not connect in testing; driver country table limited (others fall back to its worldwide list) |
 | Battery percentage | Kernel's simplified gauge algorithm; less accurate than Android's |
@@ -477,6 +519,7 @@ journal of an uncleanly unmounted filesystem.
 | `/etc/conf.d/camellia-panel` | `PANEL_TIMEOUT`, `KEYBOARD_LAYOUT` |
 | `/usr/libexec/camellia/` | `wmt-loader`, `wmt-launcher`, `mark-boot-successful`, `charge-limit` |
 | `/etc/NetworkManager/conf.d/50-camellia-unmanaged.conf` | NetworkManager off `ap0`, `p2p0` |
+| `/etc/NetworkManager/system-connections/camellia-eth.nmconnection` | Ethernet settings of the panel's LAN tab |
 | `/etc/rc.conf.d/50-camellia-cgroups.conf` | `rc_cgroup_mode="hybrid"` |
 | `/usr/share/mkinitfs/files/10-camellia-touch.files` | Touch firmware into the initramfs |
 | `/usr/share/mkinitfs/files/50-camellia-splash.files` | Splash theme into the initramfs |
@@ -498,3 +541,4 @@ journal of an uncleanly unmounted filesystem.
 | 2026-11-18 | Container kernel options, hybrid cgroups, schedtune off, crun; touch firmware (package and initramfs); `camellia-panel` (status, Wi-Fi incl. hidden and enterprise, battery, power); idle-sleep kernel patches (load 17 -> 1); writeback connectors hidden; Plymouth splash with the `nura-camellia` theme; update script for Windows |
 | 2026-11-19 | `camellia-panel` 0.8: Gboard-style keyboard (English US / Hungarian, symbol pages, long-press accents and digits, one-shot shift, caps lock) |
 | 2026-11-19 | `camellia-panel` 0.10: long-press pop-up opens with its default above the finger; Hungarian e u i o default to é ú í ó |
+| 2026-11-20 | USB OTG Ethernet: `USB_POWER_DELIVERY` (PD contract, data and power role swaps with a powered dock), `r8152` for RTL8153; `camellia-panel` 0.11: LAN tab (Ethernet status, IPv4/IPv6 automatic, manual or disabled, gateway, two DNS servers) |

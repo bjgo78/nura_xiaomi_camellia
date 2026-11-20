@@ -19,6 +19,8 @@ lv_obj_t *ui_row(lv_obj_t *card, const char *key);
 void status_create(lv_obj_t *tab);
 void status_update(int slow);
 void wifi_create(lv_obj_t *tab);
+void lan_create(lv_obj_t *tab);
+void lan_update(int slow);
 void battery_create(lv_obj_t *tab);
 void power_create(lv_obj_t *tab);
 

@@ -919,3 +919,15 @@ void kb_set_textarea(lv_obj_t *kb, lv_obj_t *ta)
 	(void)kb;
 	s.ta = ta;
 }
+
+void kb_set_symbols(lv_obj_t *kb, int symbols)
+{
+	int page = symbols ? PAGE_SYM1 : PAGE_LETTERS;
+
+	(void)kb;
+	if (s.page == page)
+		return;
+	s.page = page;
+	s.shift = SHIFT_OFF;
+	lv_async_call(rebuild_async, NULL); /* may run from a key's event */
+}

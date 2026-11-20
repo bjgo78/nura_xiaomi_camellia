@@ -1,6 +1,6 @@
 /* camellia-panel: on-screen UI for the Nura server phone.
  * DRM output, touch, backlight, power key blank/wake; status page in the first
- * tab, setup screens (Wi-Fi, battery, power) in the others. */
+ * tab, setup screens (Wi-Fi, LAN, battery, power) in the others. */
 #include <errno.h>
 #include <fcntl.h>
 #include <linux/input.h>
@@ -132,7 +132,9 @@ static void refresh_cb(lv_timer_t *t)
 	if (blanked)
 		return;
 	top_bar_update();
-	status_update(refresh_count++ % 5 == 0);
+	status_update(refresh_count % 5 == 0);
+	lan_update(refresh_count % 5 == 0);
+	refresh_count++;
 }
 
 /* The top 103 px belong to the punch-hole camera: only the clock (left of it)
@@ -142,7 +144,7 @@ static void build_layout(void)
 	lv_obj_t *scr = lv_screen_active();
 	lv_obj_t *bar, *tv, *tab;
 	static const char *const names[] = {
-		LV_SYMBOL_HOME " Status", LV_SYMBOL_WIFI " Wi-Fi",
+		LV_SYMBOL_HOME " Status", LV_SYMBOL_WIFI " Wi-Fi", LV_SYMBOL_SHUFFLE " LAN",
 		LV_SYMBOL_CHARGE " Battery", LV_SYMBOL_POWER " Power",
 	};
 
@@ -177,13 +179,15 @@ static void build_layout(void)
 	lv_obj_set_style_pad_bottom(lv_tabview_get_tab_bar(tv), 30, 0);
 	lv_obj_set_style_text_font(lv_tabview_get_tab_bar(tv), &lv_font_montserrat_28, 0);
 
-	for (unsigned i = 0; i < 4; i++) {
+	for (unsigned i = 0; i < sizeof(names) / sizeof(names[0]); i++) {
 		tab = lv_tabview_add_tab(tv, names[i]);
 		if (i == 0)
 			status_create(tab);
 		else if (i == 1)
 			wifi_create(tab);
 		else if (i == 2)
+			lan_create(tab);
+		else if (i == 3)
 			battery_create(tab);
 		else
 			power_create(tab);

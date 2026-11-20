@@ -12,6 +12,7 @@ and troubleshooting: [README.md](README.md).
 | Build host | Ubuntu 24.04 VM: 4+ cores, 16 GB RAM, 80 GB disk, internet |
 | Computer for flashing | Windows 10/11, Linux or macOS with a USB port (can be the build host) |
 | On that computer | Android Platform-Tools (`fastboot`, `adb`) on the PATH; Windows also the Google USB Driver |
+| Wired network (optional) | USB-C dock or USB Ethernet adapter with a Realtek RTL8152/8153, ASIX AX88179 or CDC chip, with or without a charger on the dock's PD port |
 | Files | `vbmeta.img` and `dtbo.img` from the stock fastboot ROM of the phone's MIUI version (`images/` folder); a LineageOS 22.2 `boot.img` for camellia, renamed to `lineage-boot.img` |
 
 Everything on the phone's internal storage is erased.
@@ -156,12 +157,18 @@ Connect Wi-Fi (always on `wlan0`):
 sudo nmcli device wifi connect "SSID" password "PASSWORD" ifname wlan0
 ```
 
+Wired network (optional): plug the dock into the phone and a network cable into the dock. `eth0`
+gets its address by DHCP and is preferred over Wi-Fi while both stay connected; the USB network to
+the computer is gone while the dock is attached, so use SSH over Wi-Fi or Ethernet then.
+Static addresses: the panel's LAN tab.
+
 Check the root filesystem: `df -h /` should show about 47 GB; if not, `sudo resize2fs /dev/loop0p2`.
 
 ## On-screen panel and boot splash (optional)
 
 The panel shows the server's status and sets Wi-Fi (including hidden and enterprise networks),
-the charge limit and power by touch; the package also brings the Nura boot splash. It was built
+Ethernet (automatic, manual or disabled IPv4 and IPv6, gateway, DNS), the charge limit and power by
+touch; the package also brings the Nura boot splash. It was built
 in Build Nura step 4; install it by running the update script from Update the phone once,
 which also flashes the changed boot image. The screen turns off after 60 s without touch
 (`PANEL_TIMEOUT` in `/etc/conf.d/camellia-panel`); the power key turns it off and on.
